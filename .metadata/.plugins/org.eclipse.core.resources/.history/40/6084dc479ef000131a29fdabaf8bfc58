@@ -1,0 +1,197 @@
+#include "../include/grid_mrf.h"
+#include <iostream>
+#include <algorithm>
+#include <cstring>
+
+using namespace std;
+
+float data_cost(const vector<int> &labels, void *observed_data)
+{
+    int *obd = static_cast<int*>(observed_data);
+	return 0.07f * min(static_cast<float>(obd[labels[0]]), 15.0f);
+}
+
+float smoothness_cost(const vector<int> &labels, void *observed_data)
+{
+    return min(static_cast<float>(abs(labels[0] - labels[1])), 1.7f);
+}
+
+void free_observed_data_destructor(void *observed_data)
+{
+	if (observed_data == NULL)
+	{
+		return;
+	}
+
+	int *m = static_cast<int*>(observed_data);
+	delete [] m;
+	return;
+}
+
+grid_mrf::grid_mrf(int rows, int cols, void *obd):
+rows_(rows), cols_(cols),
+factor_graph_(rows_ * cols_, 3 * rows_ * cols_)
+{
+	int var_nodes_cnt = rows_ * cols_;
+	int **observed_data = static_cast<int **>(obd);
+
+    for (int x = 0; x < cols_; x++)
+    {
+        for (int y = 0; y < rows_; y++)
+        {
+            int loc = y * cols + x;
+            int right_loc = loc + var_nodes_cnt;
+            int left_loc = right_loc - 1;
+            if (left_loc < var_nodes_cnt + cols * y)
+            {
+            	left_loc += cols_;
+            }
+            int down_loc = loc + 2 * var_nodes_cnt;
+            int up_loc = down_loc - cols_;
+            if (up_loc < 2 * var_nodes_cnt)
+            {
+            	up_loc += var_nodes_cnt;
+            }
+            int behind_loc = loc + 3 * var_nodes_cnt;
+            factor_graph_.set_node_type(loc, VAR_NODE);
+            factor_graph_.set_node_type(right_loc, FACTOR_NODE);  // right
+            factor_graph_.set_node_type(down_loc, FACTOR_NODE);   // down
+            factor_graph_.set_node_type(left_loc, FACTOR_NODE);   //left
+            factor_graph_.set_node_type(up_loc, FACTOR_NODE);     //up
+            factor_graph_.set_node_type(behind_loc, FACTOR_NODE); //behind
+
+            factor_graph_.insert_edge(loc, right_loc);
+            factor_graph_.insert_edge(loc, left_loc);
+            factor_graph_.insert_edge(loc, down_loc);
+            factor_graph_.insert_edge(loc, up_loc);
+            factor_graph_.insert_edge(loc, behind_loc);
+
+            int *obd_row = new int[LABEL_SET_SIZE];
+            memcpy(obd_row, observed_data + loc, sizeof(int) * LABEL_SET_SIZE);
+            factor_graph_.set_factor_func(loc + var_nodes_cnt, smoothness_cost
+            		                      , static_cast<void*>(obd_row)
+            		                      , free_observed_data_destructor);
+        }
+    }
+
+}
+
+int grid_mrf::min_sum_method(int iter, bool is_sync)
+{
+	//sweep right
+	int var_nodes_count = rows_ * cols_;
+    for (int y = 0; y < rows_; y++)
+    {
+    	for (int x = 0; x < cols_; x++)
+    	{
+    		int loc = y * cols_ + x;
+    		int right_loc = loc + var_nodes_count;
+            //factor_graph_.min_sum_variable_message_pass(loc, right_loc, is_sync);
+
+            int right_right_loc = loc + 1;
+            if (right_right_loc >= (y + 1) * cols_)
+            {
+            	right_right_loc -= cols_;
+            }
+            //factor_graph_.min_sum_factor_message_pass(right_loc, right_right_loc, is_sync);
+
+            cout << "V->F " << loc << "->" << right_loc << " ";
+            cout << "F->V " << right_loc << "->" << right_right_loc << endl;
+    	}
+    }
+
+    //sweep left
+    for (int y = 0; y < rows_; y++)
+	{
+		for (int x = cols_ - 1; x >= 0; x--)
+		{
+			int loc = y * cols_ + x;
+    		int left_loc = loc + var_nodes_count - 1;
+			if (left_loc < var_nodes_count + cols_ * y)
+			{
+				left_loc += cols_;
+			}
+			//factor_graph_.min_sum_variable_message_pass(loc, left_loc, is_sync);
+
+			int left_left_loc = loc - 1;
+			if (left_left_loc < y * cols_)
+			{
+				left_left_loc += cols_;
+			}
+			//factor_graph_.min_sum_factor_message_pass(left_loc, left_left_loc, is_sync);
+
+
+			cout << "F<-V " << left_left_loc << "<-" << left_loc << " ";
+			cout << "V<-F " << left_loc << "<-" << loc << endl;
+		}
+	}
+
+    //sweep down
+    for (int x = 0; x < cols_; x++)
+    {
+    	for (int y = 0; y < rows_; y++)
+    	{
+            int loc = y * cols_ + x;
+            int down_loc = loc + 2 * var_nodes_count;
+            //factor_graph_.min_sum_variable_message_pass(loc, down_loc, is_sync);
+
+            int down_down_loc = loc + cols_;
+            if (down_down_loc >= var_nodes_count)
+            {
+            	down_down_loc -= var_nodes_count;
+            }
+            //factor_graph_.min_sum_factor_message_pass(down_loc, down_down_loc, is_sync);
+
+            cout << "V|F " << loc << "|" << down_loc << " ";
+            cout << "F|V " << down_loc <<"|" << down_down_loc << endl;
+    	}
+    }
+
+    //sweep up
+    for (int x = 0; x < cols_; x++)
+    {
+    	for (int y = rows_ - 1; y >= 0; y--)
+    	{
+            int loc = y * cols_ + x;
+            int up_loc = loc + 2 * var_nodes_count - cols_;
+            if (up_loc < 2 * var_nodes_count)
+            {
+            	up_loc += var_nodes_count;
+            }
+            //factor_graph_.min_sum_variable_message_pass(loc, up_loc, is_sync);
+
+            int up_up_loc = loc - cols_;
+            if (up_up_loc < 0)
+            {
+            	up_up_loc += var_nodes_count;
+            }
+            //factor_graph_.min_sum_factor_message_pass(up_loc, up_up_loc, is_sync);
+
+            cout << "V^F " << loc << "^" << up_loc << " ";
+            cout << "F^V " << up_loc << "^" << up_up_loc << endl;
+    	}
+    }
+
+    return 0;
+}
+
+int grid_mrf::inference(int method, bool is_sync)
+{
+	if (method == BP_MIN_SUM)
+	{
+        min_sum_method(is_sync);
+	}
+	else if (method == BP_SUM_PRODUCT)
+	{
+		sum_product_method(is_sync);
+	}
+	return 0;
+}
+
+int grid_mrf::draw_graph()
+{
+    factor_graph_.draw_graph();
+    cout << "No. of total variable nodes: " << factor_graph_.nodes_count(0) << endl;
+    cout << "No. of total factor nodes: " << factor_graph_.nodes_count(1) << endl;
+	return 0;
+}

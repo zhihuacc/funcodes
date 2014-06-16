@@ -1,0 +1,42 @@
+#ifndef FACTOR_GRAPH_H
+#define FACTOR_GRAPH_H
+
+#include "graph_struct.h"
+
+
+
+class factor_graph: public graph_topology
+{
+private:
+
+	struct iter_param
+	{
+		int start;
+		int step;
+		int end;
+		iter_param():start(0), step(1), end(0) {}
+	};
+
+	int sum_product(const vector<iter_param> &iter_params
+			        , factor_func func
+			        , void *observed_data
+			        , const vector<tr1::shared_ptr<message> > &receivd_messages
+			        , int level
+			        , vector<int> curr_labeling
+			        , float &sum);
+	int min_sum(const vector<iter_param> &iter_params
+				        , factor_func func
+				        , void *observed_data
+				        , const vector<tr1::shared_ptr<message> > &receivd_messages
+				        , int level
+				        , vector<int> curr_labeling
+				        , float &minimum);
+public:
+	factor_graph(int var_cnt, int factor_cnt);
+	int do_loopy_min_sum();
+	int compute_message_in_sum_product(int v, int w, bool is_sync, message &hot_message);
+	int compute_message_in_min_sum(int v, int w, bool is_sync, message &hot_message);
+    int draw_graph();
+};
+
+#endif

@@ -1,0 +1,35 @@
+#ifndef FACTOR_GRAPH_H
+#define FACTOR_GRAPH_H
+
+#include "graph_struct.h"
+
+
+
+class factor_graph: public graph_topology
+{
+private:
+
+
+	struct iter_param
+	{
+		int start;
+		int step;
+		int end;
+		iter_param():start(0), step(0), end(0) {}
+	};
+
+	int marginalize(const vector<iter_param> &iter_params
+			        , factor_func func
+			        , void *observed_data
+			        , const vector<message> &receivd_msgs
+			        , int level
+			        , vector<int> curr_config
+			        , float &sum);
+public:
+	factor_graph(int var_cnt, int factor_cnt);
+	int do_loopy_min_sum();
+	int compute_message_f(int v, int w, bool is_sync);
+    int draw_graph();
+};
+
+#endif

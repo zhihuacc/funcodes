@@ -1,0 +1,16 @@
+#include "include/graph_struct.h"
+#include "include/grid_mrf.h"
+
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
+int main(int argc, char **argv)
+{
+
+    grid_mrf mrf(4, 5);
+    mrf.draw_graph();
+
+    mrf.inference(0, true);
+	return 0;
+}

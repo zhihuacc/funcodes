@@ -1,0 +1,7 @@
+17:32:42 **** Clean-only build of configuration Debug for project belief-propagation ****
+make clean 
+rm -rf  ./src/dynamical_nested_loops.o ./src/factor_graph.o ./src/graph_struct.o ./src/grid_mrf.o  ./main.o  ./src/dynamical_nested_loops.d ./src/factor_graph.d ./src/graph_struct.d ./src/grid_mrf.d  ./main.d  belief-propagation
+ 
+
+17:32:45 Build Finished (took 2s.398ms)
+

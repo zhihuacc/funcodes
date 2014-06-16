@@ -1,0 +1,21 @@
+#ifndef GRID_MRF_H
+#define GRID_MRF_H
+
+#include "factor_graph.h"
+
+class grid_mrf
+{
+private:
+	int rows_;
+	int cols_;
+	factor_graph factor_graph_;
+    int min_sum_method();
+    int sum_product_method();
+public:
+	grid_mrf(int rows, int cols);
+	int inference(int method);
+    int draw_graph();
+
+};
+
+#endif
