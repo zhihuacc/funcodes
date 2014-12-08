@@ -104,6 +104,195 @@ int normalized_ifft(const Mat &freq_domain, Mat &time_domain)
 	return 0;
 }
 
+int center_shift(const Mat &input, Mat &output)
+{
+	Mat mat = input;
+
+	if (mat.empty())
+	{
+		return -1;
+	}
+
+	int *pos = new int[mat.dims];
+	int *pos2 = new int[mat.dims];
+	const int *range = mat.size;
+	int *offset = new int[mat.dims];
+	int dims = mat.dims;
+
+	for (int i = 0; i < dims; i++)
+	{
+		pos[i] = 0;
+		offset[i] = range[i] / 2;
+		pos2[i] = offset[i];
+	}
+
+	Mat shifted(dims, range, CV_64FC2);
+
+	int i = dims - 1;
+	while(true)
+	{
+		while (i >= 0 && pos[i] >= range[i])
+		{
+			pos[i] = 0;
+			pos2[i] = offset[i];
+			--i;
+			if (i >= 0)
+			{
+				++pos[i];
+				pos2[i] = (pos[i] + offset[i]) % range[i];
+				continue;
+			}
+		}
+
+		if (i < 0)
+		{
+			break;
+		}
+
+		shifted.at<Vec2d>(pos2)[0] = mat.at<Vec2d>(pos)[0];
+		shifted.at<Vec2d>(pos2)[1] = mat.at<Vec2d>(pos)[1];
+
+		i = mat.dims - 1;
+		++pos[i];
+		pos2[i] = (pos[i] + offset[i]) % range[i];
+	}
+
+	delete [] pos;
+	delete [] pos2;
+	delete [] offset;
+
+	output = shifted;
+
+	return 0;
+}
+int icenter_shift(const Mat &input, Mat &output)
+{
+	Mat mat = input;
+
+	if (mat.empty())
+	{
+		return -1;
+	}
+
+	int *pos = new int[mat.dims];
+	int *pos2 = new int[mat.dims];
+	const int *range = mat.size;
+	int *offset = new int[mat.dims];
+	int dims = mat.dims;
+
+	for (int i = 0; i < dims; i++)
+	{
+		pos[i] = 0;
+		offset[i] = (range[i] & 1) ? (range[i] / 2 + 1) : (range[i] / 2);
+		pos2[i] = offset[i];
+	}
+
+	Mat shifted(dims, range, CV_64FC2);
+
+	int i = dims - 1;
+	while(true)
+	{
+		while (i >= 0 && pos[i] >= range[i])
+		{
+			pos[i] = 0;
+			pos2[i] = offset[i];
+			--i;
+			if (i >= 0)
+			{
+				++pos[i];
+				pos2[i] = (pos[i] + offset[i]) % range[i];
+				continue;
+			}
+		}
+
+		if (i < 0)
+		{
+			break;
+		}
+
+		shifted.at<Vec2d>(pos2)[0] = mat.at<Vec2d>(pos)[0];
+		shifted.at<Vec2d>(pos2)[1] = mat.at<Vec2d>(pos)[1];
+
+		i = mat.dims - 1;
+		++pos[i];
+		pos2[i] = (pos[i] + offset[i]) % range[i];
+	}
+
+	delete [] pos;
+	delete [] pos2;
+	delete [] offset;
+
+	output = shifted;
+
+	return 0;
+}
+
+// Work only for Vec2d
+int pw_mul(const Mat &left, const Mat &right, Mat &product)
+{
+    // Need more check
+    if (left.dims != right.dims)
+    {
+    	return -1;
+    }
+
+    Mat product_mat(left.dims, left.size, CV_64FC2);
+    MatIterator_<Vec2d> it0 = product_mat.begin<Vec2d>(), end0 = product_mat.end<Vec2d>();
+    MatConstIterator_<Vec2d> it1 = left.begin<Vec2d>(), it2 = right.begin<Vec2d>();
+
+    for (; it0 != end0; ++it0, ++it1, ++it2)
+    {
+    	(*it0)[0] = (*it1)[0] * (*it2)[0] - (*it1)[1] * (*it2)[1];
+    	(*it0)[1] = (*it1)[0] * (*it2)[1] + (*it1)[1] * (*it2)[0];
+    }
+
+    product = product_mat;
+
+    return 0;
+}
+
+// Work only for Vec2d
+int pw_pow(const Mat &base, double expo, Mat &res)
+{
+
+
+    Mat res_mat(base.dims, base.size, CV_64FC2);
+    MatIterator_<Vec2d> it0 = res_mat.begin<Vec2d>(), end0 = res_mat.end<Vec2d>();
+    MatConstIterator_<Vec2d> it1 = base.begin<Vec2d>();
+
+    for (; it0 != end0; ++it0, ++it1)
+    {
+    	Vec2d elem = *it1;
+    	complex<double> *b = reinterpret_cast<complex<double> *>(&elem);
+    	complex<double> c;
+    	c = pow(*b, expo);
+    	*it0 = *reinterpret_cast<Vec2d*>(&c);
+    }
+
+    res = res_mat;
+	return 0;
+}
+
+int pw_sqrt(const Mat &base, Mat &res)
+{
+    Mat res_mat(base.dims, base.size, CV_64FC2);
+    MatIterator_<Vec2d> it0 = res_mat.begin<Vec2d>(), end0 = res_mat.end<Vec2d>();
+    MatConstIterator_<Vec2d> it1 = base.begin<Vec2d>();
+
+    for (; it0 != end0; ++it0, ++it1)
+    {
+    	Vec2d elem = *it1;
+    	complex<double> *b = reinterpret_cast<complex<double> *>(&elem);
+    	complex<double> c;
+    	c = sqrt(*b);
+    	*it0 = *reinterpret_cast<Vec2d*>(&c);
+    }
+
+    res = res_mat;
+	return 0;
+}
+
+
 int mat_border_extension(const Mat &origin, int n, const int *border, const string &opt, Mat &extended)
 {
 	if (n < 1 || border == NULL || n != origin.dims)
@@ -536,12 +725,12 @@ int fchi(const Mat &x_pt, const Chi_Ctrl_Param &ctrl_param, const string &opt, M
 			else if (w > (param.cL - param.epL) && w < (param.cL + param.epL))
 			{
 				double r = (param.cL - w) / param.epL;
-				f = sincos_bump((1 + r) / 2, param.m);
+				f = sincos_bump((1 + r) / 2, param.degree);
 			}
 			else if (w > (param.cR - param.epR) && w < (param.cR + param.epR))
 			{
 				double r = (w - param.cR) / param.epR;
-				f = sincos_bump((1 + r) / 2, param.m);
+				f = sincos_bump((1 + r) / 2, param.degree);
 			}
 
 			(*it2)[0] = f;
@@ -567,12 +756,12 @@ int fchi(const Mat &x_pt, const Chi_Ctrl_Param &ctrl_param, const string &opt, M
 			else if (w > (param.cL - param.epL) && w < (param.cL + param.epL))
 			{
 				double r = (param.cL - w) / param.epL;
-				f = sqrt_bump((1 + r)  /2, param.m);
+				f = sqrt_bump((1 + r)  /2, param.degree);
 			}
 			else if (w > (param.cR - param.epR) && w < (param.cR + param.epR))
 			{
 				double r = (w - param.cR) / param.epR;
-				f = sqrt_bump((1 + r) / 2, param.m);
+				f = sqrt_bump((1 + r) / 2, param.degree);
 			}
 
 			(*it2)[0] = f;
@@ -588,67 +777,84 @@ int fchi(const Mat &x_pt, const Chi_Ctrl_Param &ctrl_param, const string &opt, M
 	return 0;
 }
 
-int construct_1d_filter_banks(const Mat &x_pts, int cp_num, const double *ctrl_pts, int degree, const string &opt, Filter_Set &output)
+int construct_1d_filter_system(const Mat &x_pts, const OneD_Filter_System_Param &oned_filter_system_param, OneD_Filter_System &output)
 {
-	Filter_Set filters;
-	if (cp_num < 2 || ctrl_pts == NULL)
+	int ctrl_pts_num = oned_filter_system_param.ctrl_points.len;
+	if (ctrl_pts_num < 2)
 	{
 		return -1;
 	}
+	OneD_Filter_System filter_system(ctrl_pts_num);
+	const Smart64FArray &ctrl_points = oned_filter_system_param.ctrl_points;
+	const Smart64FArray &epsilons = oned_filter_system_param.epsilons;
+	const string &opt = oned_filter_system_param.opt;
 
-	filters.reserve(cp_num);
-	filters.resize(cp_num);
+//	filters.reserve(ctrl_pts_num);
+//	filters.resize(ctrl_pts_num);
 
-	Mat shift_right_x = x_pts.clone() + Scalar(-2 * M_PI, 0);
-	Mat shift_left_x = x_pts.clone() + Scalar(2 * M_PI, 0);
+	Mat shift_right_x = x_pts.clone();
+	shift_right_x += Scalar(-2 * M_PI, 0);
 
-	for (int i = 0; i < cp_num; ++i)
+	Mat shift_left_x = x_pts.clone();
+	shift_left_x += Scalar(2 * M_PI, 0);
+
+	for (int i = 0; i < ctrl_pts_num; ++i)
 	{
-		Filter_Info &this_filter = filters[i];
-		Chi_Ctrl_Param &param = filters[i].param;
-		int idx = 2 * i;
-		if (i != cp_num - 1)
+		OneD_Filter &this_filter_block = filter_system[i];
+		Chi_Ctrl_Param this_filter_param;
+		if (i != ctrl_pts_num - 1)
 		{
-			param.cL = ctrl_pts[idx];
-			param.epL = ctrl_pts[idx + 1];
-			param.cR = ctrl_pts[idx + 2];
-			param.epR = ctrl_pts[idx + 3];
+			this_filter_param.cL = ctrl_points[i];
+			this_filter_param.epL = epsilons[i];
+			this_filter_param.cR = ctrl_points[i + 1];
+			this_filter_param.epR = epsilons[i + 1];
 		}
 		else
 		{
-			param.cL = ctrl_pts[idx];
-			param.epL = ctrl_pts[idx + 1];
-			param.cR = ctrl_pts[0];
-			param.epR = ctrl_pts[1];
+			this_filter_param.cL = ctrl_points[i];
+			this_filter_param.epL = epsilons[i];
+			this_filter_param.cR = ctrl_points[0];
+			this_filter_param.epR = epsilons[0];
 		}
-		param.m = degree;
+		this_filter_param.degree = oned_filter_system_param.degree;
 
-		this_filter.needShift = false;
-		if (param.cR < param.cL)
+		if (this_filter_param.cR < this_filter_param.cL)
 		{
-			this_filter.needShift = true;
-			param.cR += 2 * M_PI;
+			this_filter_param.cR += 2 * M_PI;
 		}
 
-		this_filter.isLowPass = false;
-		if (param.cL < 0 && param.cR > 0)
+		this_filter_block.isLowPass = false;
+		if (this_filter_param.cL - this_filter_param.epL < 0 && this_filter_param.cR + this_filter_param.epR >= 0)
 		{
-			this_filter.isLowPass = true;
+			this_filter_block.isLowPass = true;
 		}
 
 		Mat shift_right_filter;
 		Mat shift_left_filter;
 
-		fchi(shift_right_x, param, opt, shift_right_filter);
-		fchi(x_pts, param, opt, this_filter.filter);
-		fchi(shift_left_x, param, opt, shift_left_filter);
+		fchi(shift_right_x, this_filter_param, opt, shift_right_filter);
+		fchi(x_pts, this_filter_param, opt, this_filter_block.coefs);
+		fchi(shift_left_x, this_filter_param, opt, shift_left_filter);
 
-		this_filter.filter = this_filter.filter + shift_right_filter + shift_left_filter;
+		this_filter_block.coefs = this_filter_block.coefs + shift_right_filter + shift_left_filter;
 
+		SmartIntArray ds_folds(2);
+		ds_folds[0] = 1;
+		ds_folds[1] = oned_filter_system_param.folds[i];
 
+		Mat dummy;
+		SmartArray<SmartIntArray> supp;
+		downsample_in_fd_by2(this_filter_block.coefs, ds_folds, dummy, supp);
+
+		SmartIntArray reduced_supp(supp.len);
+		for (int i = 0; i < supp.len; ++i)
+		{
+			reduced_supp[i] = supp[i][1];
+		}
+		this_filter_block.support_after_ds = reduced_supp;
 	}
 
-	output = filters;
+	output = filter_system;
 
 	return 0;
 }
@@ -675,8 +881,12 @@ int linspace(double e1_r, double e1_i, double e2_r, double e2_i, int n, Mat &sam
 }
 
 
-int downsample_in_fd_by2(const Mat &filter, SmartIntArray &folds, Mat &folded_filter, vector<SmartIntArray> &support)
+int downsample_in_fd_by2(const Mat &filter, SmartIntArray &folds, Mat &folded_filter, SmartArray<SmartIntArray> &support)
 {
+	if (filter.dims != folds.len || filter.type() != CV_64FC2)
+	{
+		return -1;
+	}
 
 	int dims = filter.dims;
 	SmartIntArray start_pos1(dims);
@@ -687,13 +897,16 @@ int downsample_in_fd_by2(const Mat &filter, SmartIntArray &folds, Mat &folded_fi
 	SmartIntArray cur_pos2(dims);
 	SmartIntArray folded_range(dims);
 
+	int folded_total = 1;
 	for (int i = 0; i < dims; ++i)
 	{
 		step1[i] = 1;
 		folded_range[i] = (origin_range[i] < 2) ? 1 : (origin_range[i] / folds[i]);
+		folded_total *= folded_range[i];
 	}
-	vector<SmartIntArray> supp_set;
-	Mat folded_mat(folded_range.dims, (const int*)folded_range, CV_64FC2, Scalar(0,0));
+
+	SmartArray<SmartIntArray> supp_set(folded_total);
+	Mat folded_mat(dims, (const int*)folded_range, CV_64FC2, Scalar(0,0));
 	{
 		int src_dims;
 		SmartIntArray src_start_pos;
@@ -708,6 +921,7 @@ int downsample_in_fd_by2(const Mat &filter, SmartIntArray &folds, Mat &folded_fi
 		src_cur_pos = cur_pos1;
 		src_step = step1;
 		src_end_pos = folded_range;
+		int supp_idx = 0;
 		//--
 
 		int cur_dim = src_dims - 1;
@@ -733,8 +947,8 @@ int downsample_in_fd_by2(const Mat &filter, SmartIntArray &folds, Mat &folded_fi
 			//User-Defined actions
 			start_pos2 = src_cur_pos;
 			cur_pos2 = src_cur_pos.clone();
-			double sum_r = 0.0, sum_i = 0.0;
-			supp_set.push_back(src_cur_pos.clone());
+			complex<double> sum;
+			supp_set[supp_idx] = (src_cur_pos.clone());
 			{
 				int src_dims;
 				SmartIntArray src_start_pos;
@@ -771,23 +985,20 @@ int downsample_in_fd_by2(const Mat &filter, SmartIntArray &folds, Mat &folded_fi
 						break;
 					}
 
-					double d_r = 0.0, d_i = 0.0;
-					d_r = filter.at<Vec2d>(src_cur_pos)[0];
-					d_i = filter.at<Vec2d>(src_cur_pos)[1];
-					if (d_r > 0.0 || d_i > 0.0)
+					complex<double> ele = filter.at<complex<double> >(src_cur_pos);
+					if (ele.real() > 0.0 || ele.imag() > 0.0)
 					{
-						supp_set[supp_set.size() - 1] = src_cur_pos.clone();
+						supp_set[supp_idx] = src_cur_pos.clone();
 					}
-					sum_r += d_r;
-					sum_i += d_i;
+					sum += ele;
 
 					cur_dim = dims - 1;
 					src_cur_pos[cur_dim] += src_step[cur_dim];
 				}
 
 			}
-			folded_mat.at<Vec2d>(src_cur_pos)[0] = sum_r;
-			folded_mat.at<Vec2d>(src_cur_pos)[1] = sum_i;
+			folded_mat.at<complex<double> >(src_cur_pos) = sum;
+			++supp_idx;
 			//--
 
 			cur_dim = src_dims - 1;
@@ -802,6 +1013,655 @@ int downsample_in_fd_by2(const Mat &filter, SmartIntArray &folds, Mat &folded_fi
 	return 0;
 }
 
+int decompose_by_ml_md_filter_bank(const MLevel_MDFilter_System_Param &filter_system_param, const Mat &input, ML_MD_Filter_System &ml_md_filter_system, ML_MChannel_Coefs_Set &coefs_set)
+{
+
+	if (filter_system_param.md_fs_param_for_each_level.len < 1
+		|| input.dims != filter_system_param.md_fs_param_for_each_level[0].len)
+	{
+		return -1;
+	}
+
+	int levels = filter_system_param.md_fs_param_for_each_level.len;
+	int input_dims = input.dims;
+//	SmartIntArray origin_input_size(input_dims, input.size);
+//	SmartIntArray cur_lvl_input_size = origin_input_size.clone();
+	SmartIntArray step1(input_dims);
+	for (int i = 0; i < input_dims; ++i)
+	{
+		step1[i] = 1;
+	}
+
+	ml_md_filter_system.reserve(levels);
+	coefs_set.reserve(levels);
+	coefs_set.resize(levels);
+	// Every Level
+	for (int cur_lvl = 0; cur_lvl < levels; ++cur_lvl)
+	{
+		Mat last_approx;
+		if (cur_lvl == 0)
+		{
+			Mat fd_input;
+			normalized_fft(input, fd_input);
+//			save_as_media("Test-Data/freq-origin.jpg", fd_input, NULL);
+			center_shift(fd_input, fd_input);
+//			save_as_media("Test-Data/freq-shifted.jpg", fd_input, NULL);
+			last_approx = fd_input;
+		}
+		else
+		{
+			last_approx = coefs_set[cur_lvl - 1][coefs_set[cur_lvl - 1].size() - 1];
+			coefs_set[cur_lvl - 1].pop_back();
+		}
+		SmartIntArray this_level_filter_size_for_each_dim(input_dims, last_approx.size);
+
+		SmartIntArray oned_filter_num_for_each_dim(input_dims);
+		MD_Filter_System &this_level_md_fs = ml_md_filter_system[cur_lvl];
+		this_level_md_fs.oned_fs_for_each_dim.reserve(input_dims);
+		for (int cur_dim = 0; cur_dim < input_dims; ++cur_dim)		// Every dim in this level
+		{
+			const OneD_Filter_System_Param &oned_filter_system_param = filter_system_param.md_fs_param_for_each_level[cur_lvl][cur_dim];
+
+			int this_dim_filter_size = this_level_filter_size_for_each_dim[cur_dim];
+			Mat x_pts;
+			linspace(-M_PI, 0, M_PI, 0, this_dim_filter_size, x_pts);
+
+			OneD_Filter_System &oned_filter_system = this_level_md_fs.oned_fs_for_each_dim[cur_dim];
+			//TODO: Make sure low-pass be arranged at the end of oned_filter_system
+			construct_1d_filter_system(x_pts, oned_filter_system_param, oned_filter_system);
+
+			oned_filter_num_for_each_dim[cur_dim] = oned_filter_system.len;
+		}
+
+		// Find all combinations to do tensor product
+		SmartArray<Mat> chosen_filter_for_each_dim(input_dims);
+		SmartArray<SmartIntArray> supp_after_ds_for_each_dim(input_dims);
+		for (int cur_dim = 0; cur_dim < input_dims; ++cur_dim)
+		{
+			chosen_filter_for_each_dim[cur_dim] = this_level_md_fs.oned_fs_for_each_dim[cur_dim][0].coefs;
+			supp_after_ds_for_each_dim[cur_dim] = this_level_md_fs.oned_fs_for_each_dim[cur_dim][0].support_after_ds;
+		}
+
+		Mat lowpass_filter(input_dims, this_level_filter_size_for_each_dim, CV_64FC2, Scalar(0,0));
+		SmartIntArray start_pos1(input_dims);
+		{
+			int src_dims;
+			SmartIntArray src_start_pos;
+			SmartIntArray src_cur_pos;
+			SmartIntArray src_step;
+			SmartIntArray src_end_pos;
+
+
+			//User-Defined initialization
+			src_dims = input_dims;
+			src_start_pos = start_pos1;
+			src_cur_pos = start_pos1.clone();
+			src_step = step1;
+			src_end_pos = oned_filter_num_for_each_dim;
+			//--
+
+			int cur_dim = src_dims - 1;
+			while(true)
+			{
+				while (cur_dim >= 0 && src_cur_pos[cur_dim] >= src_end_pos[cur_dim])
+				{
+					src_cur_pos[cur_dim] = src_start_pos[cur_dim];
+					--cur_dim;
+					if (cur_dim >= 0)
+					{
+						src_cur_pos[cur_dim] += src_step[cur_dim];
+
+						continue;
+					}
+				}
+
+				if (cur_dim < 0)
+				{
+					break;
+				}
+
+				//User-Defined actions
+				//A combination is found.
+				bool is_lowpass = true;
+				//Start at 0, since we need to check lowpass for all filters
+				for (int i = 0; i < src_dims; ++i)
+				{
+					const OneD_Filter &fb = this_level_md_fs.oned_fs_for_each_dim[i][src_cur_pos[i]];
+					chosen_filter_for_each_dim[i] = fb.coefs;
+					supp_after_ds_for_each_dim[i]= fb.support_after_ds;
+					is_lowpass = is_lowpass && fb.isLowPass;
+				}
+
+				Mat md_filter;
+				tensor_product(chosen_filter_for_each_dim, md_filter);
+
+				if (is_lowpass)
+				{
+//					pow(md_filter, 2, md_filter);
+					pw_pow(md_filter, 2, md_filter);
+					lowpass_filter += md_filter;
+				}
+				else
+				{
+//					Mat filtered = last_approx.mul(md_filter);
+//					Mat filtered;
+//					pw_mul(last_approx, md_filter, filtered);
+//					Mat mat_after_ds;
+//					mat_select(filtered, supp_after_ds_for_each_dim, mat_after_ds);
+//					this_level_md_fs.md_filters_coefs.push_back(md_filter);
+//
+//					icenter_shift(mat_after_ds, mat_after_ds);
+//
+//					Mat td;
+//					normalized_ifft(mat_after_ds, td);
+//					coefs_set[cur_lvl].push_back(td);
+
+					//--  Optimization --
+					Mat last_approx_subarea, md_filter_subarea;
+					mat_select(last_approx, supp_after_ds_for_each_dim, last_approx_subarea);
+					mat_select(md_filter, supp_after_ds_for_each_dim, md_filter_subarea);
+
+					Mat filtered;
+					pw_mul(last_approx_subarea, md_filter_subarea, filtered);
+					icenter_shift(filtered, filtered);
+					normalized_ifft(filtered, filtered);
+					coefs_set[cur_lvl].push_back(filtered);
+					//--
+				}
+				//--
+
+				cur_dim = src_dims - 1;
+				src_cur_pos[cur_dim] += src_step[cur_dim];
+			}
+
+		}
+
+//		sqrt(lowpass_filter, lowpass_filter);
+		pw_sqrt(lowpass_filter, lowpass_filter);
+		this_level_md_fs.md_filters_coefs.push_back(lowpass_filter);
+		if (true)
+		{
+//			Mat filtered;
+//			pw_mul(last_approx, lowpass_filter, filtered);
+//			SmartArray<SmartIntArray> range_for_each_dim(lowpass_filter.dims);
+//			for (int i = 0; i < lowpass_filter.dims; ++i)
+//			{
+//				range_for_each_dim[i].reserve(3);
+//				range_for_each_dim[i][0] = lowpass_filter.size[i] / 4;
+//				range_for_each_dim[i][1] = -1;
+//				range_for_each_dim[i][2] = lowpass_filter.size[i] / 4 * 3 - 1;
+//			}
+//
+//			mat_select(filtered, range_for_each_dim, filtered);
+//
+//			if (cur_lvl == levels - 1)
+//			{
+//				icenter_shift(filtered, filtered);
+//
+//				Mat td;
+//				normalized_ifft(filtered, td);
+//				coefs_set[cur_lvl].push_back(td);
+//			}
+//			else
+//			{
+//				coefs_set[cur_lvl].push_back(filtered);
+//			}
+
+			SmartArray<SmartIntArray> range_for_each_dim(lowpass_filter.dims);
+			for (int i = 0; i < lowpass_filter.dims; ++i)
+			{
+				range_for_each_dim[i].reserve(3);
+				range_for_each_dim[i][0] = lowpass_filter.size[i] / 4;
+				range_for_each_dim[i][1] = -1;
+				range_for_each_dim[i][2] = lowpass_filter.size[i] / 4 * 3 - 1;
+			}
+
+			Mat last_approx_subarea, filter_subarea, filtered;
+			mat_select(last_approx, range_for_each_dim, last_approx_subarea);
+			mat_select(lowpass_filter, range_for_each_dim, filter_subarea);
+			pw_mul(last_approx_subarea, filter_subarea, filtered);
+
+			if (cur_lvl == levels - 1)
+			{
+				icenter_shift(filtered, filtered);
+				normalized_ifft(filtered, filtered);
+				coefs_set[cur_lvl].push_back(filtered);
+			}
+			else
+			{
+				coefs_set[cur_lvl].push_back(filtered);
+			}
+		}
+
+	}
+
+	return 0;
+}
+
+int reconstruct_by_ml_md_filter_bank(const MLevel_MDFilter_System_Param &filter_system_param, const ML_MChannel_Coefs_Set &ml_mc_coefs_set, Mat &rec)
+{
+
+	if (filter_system_param.md_fs_param_for_each_level.len < 1)
+	{
+		return -1;
+	}
+	int levels = filter_system_param.md_fs_param_for_each_level.len;
+	int sig_dims = filter_system_param.md_fs_param_for_each_level[0].len;
+
+	SmartIntArray step1(sig_dims);
+	for (int i = 0; i < sig_dims; ++i)
+	{
+		step1[i] = 1;
+	}
+
+//	ML_MChannel_Coefs_Set ml_mc_coefs_set_cpy = ml_mc_coefs_set;
+
+	// Every Level
+	Mat upper_level_lowpass_approx;
+	Mat this_level_lowpass_approx;
+	for (int cur_lvl = levels - 1; cur_lvl >= 0; --cur_lvl)
+	{
+		const vector<Mat> &this_level_coefs_set = ml_mc_coefs_set[cur_lvl];
+		if (cur_lvl == levels - 1)
+		{
+			this_level_lowpass_approx = this_level_coefs_set[this_level_coefs_set.size() - 1].clone();
+			normalized_fft(this_level_lowpass_approx, this_level_lowpass_approx);
+			center_shift(this_level_lowpass_approx, this_level_lowpass_approx);
+		}
+		else
+		{
+			this_level_lowpass_approx = upper_level_lowpass_approx;
+		}
+
+		SmartIntArray this_level_filter_size_for_each_dim(sig_dims);
+		for (int i = 0; i < sig_dims; ++i)
+		{
+			this_level_filter_size_for_each_dim[i] = this_level_lowpass_approx.size[i] * filter_system_param.lowpass_approx_ds_folds[cur_lvl][i];
+		}
+
+		SmartIntArray this_level_filter_num_for_each_dim(sig_dims);
+		MD_Filter_System this_level_md_fs;
+		this_level_md_fs.oned_fs_for_each_dim.reserve(sig_dims);
+		for (int cur_dim = 0; cur_dim < sig_dims; ++cur_dim)		// Every dim in this level
+		{
+			const OneD_Filter_System_Param &oned_filter_system_param = filter_system_param.md_fs_param_for_each_level[cur_lvl][cur_dim];
+
+			int this_dim_filter_size = this_level_filter_size_for_each_dim[cur_dim];
+			Mat x_pts;
+			linspace(-M_PI, 0, M_PI, 0, this_dim_filter_size, x_pts);
+
+			OneD_Filter_System &oned_filter_system = this_level_md_fs.oned_fs_for_each_dim[cur_dim];
+			//TODO: Make sure low-pass be arranged at the end of oned_filter_system
+			construct_1d_filter_system(x_pts, oned_filter_system_param, oned_filter_system);
+
+			this_level_filter_num_for_each_dim[cur_dim] = oned_filter_system.len;
+		}
+
+		// Find all combinations to do tensor product
+		SmartArray<Mat> chosen_filter_for_each_dim(sig_dims);
+		SmartArray<SmartIntArray> supp_after_ds_for_each_dim(sig_dims);
+		for (int cur_dim = 0; cur_dim < sig_dims; ++cur_dim)
+		{
+			chosen_filter_for_each_dim[cur_dim] = this_level_md_fs.oned_fs_for_each_dim[cur_dim][0].coefs;
+			supp_after_ds_for_each_dim[cur_dim] = this_level_md_fs.oned_fs_for_each_dim[cur_dim][0].support_after_ds;
+		}
+
+		Mat this_level_highpass_sum = Mat(sig_dims, this_level_filter_size_for_each_dim, CV_64FC2, Scalar(0,0));
+		int coef_index = 0;
+		Mat lowpass_filter(sig_dims, this_level_filter_size_for_each_dim, CV_64FC2, Scalar(0,0));
+		SmartIntArray start_pos1(sig_dims);
+		{
+			int src_dims;
+			SmartIntArray src_start_pos;
+			SmartIntArray src_cur_pos;
+			SmartIntArray src_step;
+			SmartIntArray src_end_pos;
+
+
+			//User-Defined initialization
+			src_dims = sig_dims;
+			src_start_pos = start_pos1;
+			src_cur_pos = start_pos1.clone();
+			src_step = step1;
+			src_end_pos = this_level_filter_num_for_each_dim;
+			//--
+
+			int cur_dim = src_dims - 1;
+			while(true)
+			{
+				while (cur_dim >= 0 && src_cur_pos[cur_dim] >= src_end_pos[cur_dim])
+				{
+					src_cur_pos[cur_dim] = src_start_pos[cur_dim];
+					--cur_dim;
+					if (cur_dim >= 0)
+					{
+						src_cur_pos[cur_dim] += src_step[cur_dim];
+
+						continue;
+					}
+				}
+
+				if (cur_dim < 0)
+				{
+					break;
+				}
+
+				//User-Defined actions
+				//A combination is found.
+				bool is_lowpass = true;
+				//Start at 0, since we need to check lowpass for all filters
+				for (int i = 0; i < src_dims; ++i)
+				{
+					const OneD_Filter &fb = this_level_md_fs.oned_fs_for_each_dim[i][src_cur_pos[i]];
+					chosen_filter_for_each_dim[i] = fb.coefs;
+					supp_after_ds_for_each_dim[i]= fb.support_after_ds;
+					is_lowpass = is_lowpass && fb.isLowPass;
+				}
+
+				Mat md_filter;
+				tensor_product(chosen_filter_for_each_dim, md_filter);
+
+				if (is_lowpass)
+				{
+					pw_pow(md_filter, 2, md_filter);
+					lowpass_filter += md_filter;
+				}
+				else
+				{
+					Mat this_channel_coef = this_level_coefs_set[coef_index].clone();
+
+					// To change phase of the coef
+//					SmartArray<Mat> ones_for_each_dim(sig_dims);
+//					for (int i = 0; i < sig_dims; ++i)
+//					{
+//						int this_dim_coef_size = this_channel_coef.size[i];
+//						Mat &ones_seq = ones_for_each_dim[i];
+//						ones_seq.create(2, (int[]){1, this_dim_coef_size}, CV_64FC2);
+//						ones_seq.at<complex<double> >(0, 0) = complex<double>(1,0);
+//						for (int j = 1; j < this_dim_coef_size; ++j)
+//						{
+//							ones_seq.at<complex<double> >(0, j) = ones_seq.at<complex<double> >(0, j - 1) * (-1.0);
+//						}
+//					}
+//					Mat phase_change;
+//					tensor_product(ones_for_each_dim, phase_change);
+//
+//					pw_mul(this_channel_coef, phase_change, this_channel_coef);
+
+					normalized_fft(this_channel_coef, this_channel_coef);
+					center_shift(this_channel_coef, this_channel_coef);
+
+//					Mat expanded_coef(sig_dims, this_level_filter_size_for_each_dim, CV_64FC2, Scalar(0,0));
+//					mat_subfill(expanded_coef, supp_after_ds_for_each_dim, this_channel_coef, expanded_coef);
+//					pw_mul(expanded_coef, md_filter, expanded_coef);
+
+					Mat filter_subarea, filtered, expanded_coef;
+					expanded_coef = Mat(sig_dims, this_level_filter_size_for_each_dim, CV_64FC2, Scalar(0,0));
+					mat_select(md_filter, supp_after_ds_for_each_dim, filter_subarea);
+					pw_mul(this_channel_coef, filter_subarea, filtered);
+					mat_subfill(expanded_coef, supp_after_ds_for_each_dim, filtered, expanded_coef);
+
+					this_level_highpass_sum += expanded_coef;
+					++coef_index;
+				}
+				//--
+
+				cur_dim = src_dims - 1;
+				src_cur_pos[cur_dim] += src_step[cur_dim];
+			}
+
+		}
+
+
+		pw_sqrt(lowpass_filter, lowpass_filter);
+		if (true)
+		{
+
+			SmartArray<SmartIntArray> range_for_each_dim(lowpass_filter.dims);
+			for (int i = 0; i < lowpass_filter.dims; ++i)
+			{
+				range_for_each_dim[i].reserve(3);
+				range_for_each_dim[i][0] = lowpass_filter.size[i] / 4;
+				range_for_each_dim[i][1] = -1;
+				range_for_each_dim[i][2] = lowpass_filter.size[i] / 4 * 3 - 1;
+			}
+
+//			Mat expanded_coef(sig_dims, this_level_filter_size_for_each_dim, CV_64FC2, Scalar(0,0));
+//
+//			mat_subfill(expanded_coef, range_for_each_dim, this_level_lowpass_approx, expanded_coef);
+//
+//			pw_mul(expanded_coef, lowpass_filter, expanded_coef);
+//
+//			upper_level_lowpass_approx = this_level_highpass_sum + expanded_coef;
+
+			Mat filter_subarea, filtered, expanded_coef;
+			mat_select(lowpass_filter, range_for_each_dim, filter_subarea);
+			pw_mul(this_level_lowpass_approx, filter_subarea, filtered);
+
+			expanded_coef = Mat(sig_dims, this_level_filter_size_for_each_dim, CV_64FC2, Scalar(0,0));
+			mat_subfill(expanded_coef, range_for_each_dim, filtered, expanded_coef);
+			upper_level_lowpass_approx = this_level_highpass_sum + expanded_coef;
+		}
+
+	}
+
+	icenter_shift(upper_level_lowpass_approx, upper_level_lowpass_approx);
+	normalized_ifft(upper_level_lowpass_approx, upper_level_lowpass_approx);
+
+	rec = upper_level_lowpass_approx;
+
+	return 0;
+}
+
+
+
+/*
+ * Do tensor product given a series of vectors.
+ *   TP(v0,v1,...,vn)(i0,i1,...,in) = v0[i0]*v1[i1]*...*vn[in].
+ *
+ * components_for_each_dim: Input param. The given n vectors
+ * product: output. The resulting n-d matrix.
+ */
+int tensor_product(const SmartArray<Mat> &components_for_each_dim, Mat &product)
+{
+	//TODO: make sure all input components are continuous mat, and row vectors.
+	int dims = components_for_each_dim.len;
+	SmartIntArray dim_size(dims);
+	Mat sub_mat = components_for_each_dim[dims - 1];    //row vector
+	dim_size[dims - 1] = sub_mat.total();
+	for (int cur_dim = dims - 2; cur_dim >= 0; --cur_dim)
+	{
+		const Mat &cur_dim_mat = components_for_each_dim[cur_dim];   // column vector;
+		dim_size[cur_dim] = cur_dim_mat.total();
+		sub_mat = cur_dim_mat.t() * sub_mat;	//This is a 2D matrix. Transpose is O(1) operation.
+		sub_mat = sub_mat.reshape(0, 1);    //Convert to row vector. O(1) operation
+//		print_mat_details_g<Vec2d>(sub_mat, 0, "Test-Data/tensor-product.txt");
+	}
+
+//	//NOTE: Wrong Doing!!! Memory Corruption would happen, since sub_mat would dealloc memory when going out of scope.
+//	Mat md_mat(dims, (const int *)dim_size, sub_mat.type(), sub_mat.data);
+//	sub_mat.create(dims, dim_size, sub_mat.type());
+	Mat reshaped(dims, (const int *)dim_size, sub_mat.type());
+	MatConstIterator_<Vec2d> it0 = sub_mat.begin<Vec2d>(), end0 = sub_mat.end<Vec2d>();
+	MatIterator_<Vec2d> it1 = reshaped.begin<Vec2d>();
+	for (; it0 != end0; ++it0, ++it1)
+	{
+		*it1 = *it0;
+	}
+	product = reshaped;
+//	print_mat_details_g<Vec2d>(reshaped, 0, "Test-Data/tensor-product.txt");
+
+	return 0;
+}
+
+int mat_select(const Mat &origin_mat, const SmartArray<SmartIntArray> &index_set_for_each_dim, Mat &sub_mat)
+{
+	int dims = index_set_for_each_dim.len;
+	SmartIntArray start_pos1(dims);
+	SmartIntArray cur_pos1(dims);
+	SmartIntArray step1(dims);
+	SmartIntArray end_pos1(dims);
+	SmartIntArray sel_idx(dims);
+	SmartArray<SmartIntArray> index_set_for_each_dim_cpy = index_set_for_each_dim.clone();
+	for (int i = 0; i < dims; ++i)
+	{
+		step1[i] = 1;
+		if (index_set_for_each_dim[i].len == 3 && index_set_for_each_dim[i][1] < 0)
+		{
+			const SmartIntArray &this_idx_set = index_set_for_each_dim[i];
+			int start = this_idx_set[0];
+			int step = -this_idx_set[1];
+			int stop = this_idx_set[2];
+			SmartIntArray expanded((stop - start) / step + 1);
+			for (int j = start; j <= stop; j += step)
+			{
+				expanded[j - start] = j;
+			}
+			index_set_for_each_dim_cpy[i] = expanded;
+		}
+		end_pos1[i] = index_set_for_each_dim_cpy[i].len;
+		sel_idx[i] = index_set_for_each_dim_cpy[i][0];
+	}
+
+	Mat selected(dims, (const int*)end_pos1, origin_mat.type());
+	{
+		int src_dims;
+		SmartIntArray src_start_pos;
+		SmartIntArray src_cur_pos;
+		SmartIntArray src_step;
+		SmartIntArray src_end_pos;
+
+
+		//User-Defined initialization
+		src_dims = dims;
+		src_start_pos = start_pos1;
+		src_cur_pos = cur_pos1;
+		src_step = step1;
+		src_end_pos = end_pos1;
+		//--
+
+		int cur_dim = src_dims - 1;
+		while(true)
+		{
+			while (cur_dim >= 0 && src_cur_pos[cur_dim] >= src_end_pos[cur_dim])
+			{
+				src_cur_pos[cur_dim] = src_start_pos[cur_dim];
+				--cur_dim;
+				if (cur_dim >= 0)
+				{
+					src_cur_pos[cur_dim] += src_step[cur_dim];
+
+					continue;
+				}
+			}
+
+			if (cur_dim < 0)
+			{
+				break;
+			}
+
+			//User-Defined actions
+			for (; cur_dim < src_dims; ++cur_dim)
+			{
+				sel_idx[cur_dim] = index_set_for_each_dim_cpy[cur_dim][src_cur_pos[cur_dim]];
+			}
+			selected.at<complex<double> >((const int*)src_cur_pos) = origin_mat.at<complex<double> >((const int*)sel_idx);
+			//--
+
+			cur_dim = src_dims - 1;
+			src_cur_pos[cur_dim] += src_step[cur_dim];
+		}
+
+	}
+
+	sub_mat = selected;
+	return 0;
+}
+
+int mat_subfill(const Mat &origin_mat, const SmartArray<SmartIntArray> &index_set_for_each_dim, const Mat &submat, Mat &filled_mat)
+{
+	int dims = index_set_for_each_dim.len;
+	SmartIntArray start_pos1(dims);
+	SmartIntArray cur_pos1(dims);
+	SmartIntArray step1(dims);
+	SmartIntArray end_pos1(dims);
+	SmartIntArray sel_idx(dims);
+	SmartArray<SmartIntArray> index_set_for_each_dim_cpy = index_set_for_each_dim.clone();
+	for (int i = 0; i < dims; ++i)
+	{
+		step1[i] = 1;
+		if (index_set_for_each_dim[i].len == 3 && index_set_for_each_dim[i][1] < 0)
+		{
+			const SmartIntArray &this_idx_set = index_set_for_each_dim[i];
+			int start = this_idx_set[0];
+			int step = -this_idx_set[1];
+			int stop = this_idx_set[2];
+			SmartIntArray expanded((stop - start) / step + 1);
+			for (int j = start; j <= stop; j += step)
+			{
+				expanded[j - start] = j;
+			}
+			index_set_for_each_dim_cpy[i] = expanded;
+		}
+		end_pos1[i] = index_set_for_each_dim_cpy[i].len;
+		sel_idx[i] = index_set_for_each_dim_cpy[i][0];
+	}
+
+	Mat origin_cpy = origin_mat.clone();
+	{
+		int src_dims;
+		SmartIntArray src_start_pos;
+		SmartIntArray src_cur_pos;
+		SmartIntArray src_step;
+		SmartIntArray src_end_pos;
+
+
+		//User-Defined initialization
+		src_dims = dims;
+		src_start_pos = start_pos1;
+		src_cur_pos = cur_pos1;
+		src_step = step1;
+		src_end_pos = end_pos1;
+		//--
+
+		int cur_dim = src_dims - 1;
+		while(true)
+		{
+			while (cur_dim >= 0 && src_cur_pos[cur_dim] >= src_end_pos[cur_dim])
+			{
+				src_cur_pos[cur_dim] = src_start_pos[cur_dim];
+				--cur_dim;
+				if (cur_dim >= 0)
+				{
+					src_cur_pos[cur_dim] += src_step[cur_dim];
+
+					continue;
+				}
+			}
+
+			if (cur_dim < 0)
+			{
+				break;
+			}
+
+			//User-Defined actions
+			for (; cur_dim < src_dims; ++cur_dim)
+			{
+				sel_idx[cur_dim] = index_set_for_each_dim_cpy[cur_dim][src_cur_pos[cur_dim]];
+			}
+			origin_cpy.at<complex<double> >((const int *)sel_idx) = submat.at<complex<double> >((const int *)src_cur_pos);
+			//--
+
+			cur_dim = src_dims - 1;
+			src_cur_pos[cur_dim] += src_step[cur_dim];
+		}
+
+	}
+
+	filled_mat = origin_cpy;
+	return 0;
+}
+
 
 int psnr(const Mat &left, const Mat &right, double &psnr, double &msr)
 {
@@ -810,25 +1670,26 @@ int psnr(const Mat &left, const Mat &right, double &psnr, double &msr)
 		return -1;
 	}
 
+	Mat dif = left - right;
 	double msr_stat = 0.0;
-	MatConstIterator_<Vec2d> it0 = left.begin<Vec2d>(), end0 = left.end<Vec2d>(),
+	MatConstIterator_<Vec2d> it0 = dif.begin<Vec2d>(), end0 = dif.end<Vec2d>(),
 			                 it1 = right.begin<Vec2d>();
 
 	for (; it0 != end0; ++it0, ++it1)
 	{
-		double dif = sqrt((*it0)[0] * (*it0)[0] + (*it0)[1] * (*it0)[1])
-				    - sqrt((*it1)[0] * (*it1)[0] + (*it1)[1] * (*it1)[1]);
+//		double dif = sqrt((*it0)[0] * (*it0)[0] + (*it0)[1] * (*it0)[1])
+//				    - sqrt((*it1)[0] * (*it1)[0] + (*it1)[1] * (*it1)[1]);
 
-
-		msr_stat += dif * dif;
+		double sqr = (*it0)[0] * (*it0)[0] + (*it0)[1] * (*it0)[1];
+		msr_stat += sqr;
 	}
 
 	msr_stat = sqrt(msr_stat / left.total());
 
-	if (msr_stat < 0.000001)
-	{
-		return -1;
-	}
+//	if (msr_stat < 0.000001)
+//	{
+//		return -1;
+//	}
 
 	double psnr_stat = 0.0;
 
@@ -852,7 +1713,7 @@ int load_as_tensor(const string &filename, Mat &output, Media_Format *media_file
 	string suffix = filename.substr(pos);
 	Mat mat;
 	// images
-	if (suffix == string(".jpg") || suffix == string(".bmp") || suffix == string(".jpeg"))
+	if (suffix == string(".jpg") || suffix == string(".bmp") || suffix == string(".jpeg") || suffix == string(".png"))
 	{
 		Mat img = imread(filename);
 		if (img.empty())
@@ -967,7 +1828,10 @@ int save_as_media(const string &filename, const Mat &mat, const Media_Format *me
 {
     if (mat.dims == 2 && mat.size[0] != 1)
     {
-         Mat img(mat.size(), CV_64FC1);
+         Mat img_r(mat.size(), CV_64FC1);
+         Mat img_i(mat.size(), CV_64FC1);
+         Mat img_abs(mat.size(), CV_64FC1);
+
 
          for (int i = 0; i < mat.rows; i++)
          {
@@ -976,13 +1840,27 @@ int save_as_media(const string &filename, const Mat &mat, const Media_Format *me
          		double d = mat.at<Vec2d>(i, j)[0] * mat.at<Vec2d>(i, j)[0]
          		         + mat.at<Vec2d>(i, j)[1] * mat.at<Vec2d>(i, j)[1];
 
-         		img.at<double>(i, j) = sqrt(d);
+         		img_r.at<double>(i, j) = mat.at<Vec2d>(i,j)[0];
+         		img_i.at<double>(i, j) = mat.at<Vec2d>(i,j)[1];
+         		img_abs.at<double>(i, j) = sqrt(d);
          	}
+
          }
 
-         img.convertTo(img, CV_8UC1, 1, 0);
+         double d0, d1;
+         minMaxLoc(img_r, &d0, &d1);
+         img_r.convertTo(img_r, 255.0 / (d0 - d1), -255.0 / (d0 - d1));
+         img_r.convertTo(img_r, CV_8UC1, 1, 0);
+         imwrite(filename+ "-r.jpg", img_r);
 
-         imwrite(filename, img);
+         img_i.convertTo(img_i, 255.0 / (d0 - d1), -255.0 / (d0 - d1));
+         img_i.convertTo(img_i, CV_8UC1, 1, 0);
+         imwrite(filename + "-i.jpg", img_i);
+
+
+         img_abs.convertTo(img_abs, 255.0 / (d0 - d1), -255.0 / (d0 - d1));
+         img_abs.convertTo(img_abs, CV_8UC1, 1, 0);
+         imwrite(filename + "-abs.jpg", img_abs);
 
          return 0;
     }

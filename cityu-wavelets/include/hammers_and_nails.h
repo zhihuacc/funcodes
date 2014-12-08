@@ -19,37 +19,54 @@ template<class T>
 struct SmartArray
 {
 
-	SmartArray():dims(0) {}
+	SmartArray():len(0) {}
 	// TODO: Need to take care of copy (smart ptr)
-	SmartArray(int d):dims(d)
+	SmartArray(int d):len(d)
 	{
-		if (dims > 0)
+		if (len > 0)
 		{
-			T *blk = new T[dims];
-			memset((void*)blk, 0, sizeof(T) * dims);
+			T *blk = new T[len]();
 			p = tr1::shared_ptr<T>(blk, array_deleter<T>());
 		}
 	}
 
-	SmartArray(int d, const T *data):dims(d)
+	SmartArray(int d, const T *data):len(d)
 	{
-		if (dims > 0 && data != NULL)
+		if (len > 0 && data != NULL)
 		{
-			T *copy = new T[dims];
-			memcpy((void*)copy, (void*)data, sizeof(T) * dims);
+			T *copy = new T[len]();
+			//memcpy((void*)copy, (void*)data, sizeof(T) * dims); //TODO: Wrong Doing! Should copy by copy-constructor.
+//			T *cast_data = (T*)data;
+//			for (int i = 0; i < len; ++i)
+//			{
+//				copy[i] = cast_data[i];
+//			}
+			std::copy(data, data + len, copy);
 			p = tr1::shared_ptr<T>(copy, array_deleter<T>());
 		}
 	}
 
 	~SmartArray() {}
 
-    const T& operator[](int i) const { return p.get()[i]; }
-    T& operator[](int i) { return p.get()[i]; }
-    operator const T*() const { return p.get(); }
-    bool operator == (const SmartArray& sz) const
+	inline void reserve(int n)
+	{
+		if (n > 0)
+		{
+			len = n;
+			T *blk = new T[len]();
+			p = tr1::shared_ptr<T>(blk, array_deleter<T>());
+		}
+	}
+
+	inline int size() { return len; }
+
+    inline const T& operator[](int i) const { return p.get()[i]; }
+    inline T& operator[](int i) { return p.get()[i]; }
+    inline operator const T*() const { return p.get(); }
+    inline bool operator == (const SmartArray& sz) const
 	{
 		T *pp0 = p.get(), *pp1 = sz.p.get();
-		int d = dims, dsz = sz.dims;
+		int d = len, dsz = sz.len;
 		if( d != dsz )
 			return false;
 		if( d == 2 )
@@ -61,14 +78,14 @@ struct SmartArray
 		return true;
 	}
 
-    bool operator != (const SmartArray& sz) const {return !(*this == sz);}
+    inline bool operator != (const SmartArray& sz) const {return !(*this == sz);}
 
     SmartArray clone() const {
-    	SmartArray deepcpy(this->dims, this->p.get());
+    	SmartArray deepcpy(this->len, this->p.get());
     	return deepcpy;
     }
 
-    int dims;
+    int len;
     tr1::shared_ptr<T> p;
 };
 
