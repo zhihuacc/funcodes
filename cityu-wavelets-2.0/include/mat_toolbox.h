@@ -21,10 +21,25 @@ inline bool isGoodMat(const Mat_<Vec<_Tp, 2> > &domain)
 	if (domain.empty() || !domain.isContinuous()
 		|| (domain.depth() != CV_64F && domain.depth() != CV_32F) || domain.channels() != 2)
 	{
+		cout << "Failed in isGoodMat " << endl;
+//		CV_ERROR(CV_StsInternal, "Test of isGoodMat failed.");
 		return false;
 	}
 
 	return true;
+}
+
+template<typename _Tp>
+inline bool sameSize(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right)
+{
+	SmartIntArray sl(left.dims, left.size), sr(right.dims, right.size);
+	bool ret = sl == sr;
+	if (ret == false)
+	{
+		cout << "Failed in sameSize " << endl;
+	}
+
+	return ret;
 }
 
 
@@ -277,7 +292,7 @@ template<typename _Tp>
 int pw_mul(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat_<Vec<_Tp, 2> > &product)
 {
     // Need more check if that left and right match
-    if (!isGoodMat(left) || !isGoodMat(right))
+    if (!isGoodMat(left) || !isGoodMat(right) || !sameSize(left, right))
     {
     	return -1;
     }
@@ -322,7 +337,7 @@ template<typename _Tp>
 int pw_div(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat_<Vec<_Tp, 2> > &res)
 {
     // Need more check if that left and right match
-    if (!isGoodMat(left) || !isGoodMat(right))
+    if (!isGoodMat(left) || !isGoodMat(right) || !sameSize(left, right))
     {
     	return -1;
     }
@@ -415,7 +430,7 @@ int pw_pow(const Mat_<Vec<_Tp, 2> > &base, _Tp expo, Mat_<Vec<_Tp, 2> > &res)
     {
 		for (int i = 0; i < N; ++i, ++pbase, ++pres)
 		{
-			*pres = pow(*pbase, expo);
+			*pres = pow<_Tp>(*pbase, expo);
 		}
     }
     res = res_mat;
@@ -456,7 +471,7 @@ int pw_sqrt(const Mat_<Vec<_Tp, 2> > &base, Mat_<Vec<_Tp, 2> > &res)
     		     *pres  = reinterpret_cast<complex<_Tp> *>(res_mat.data);
     for (int i = 0; i < N; ++i, ++pbase, ++pres)
     {
-    	*pres = sqrt(*pbase);
+    	*pres = sqrt<_Tp>(*pbase);
     }
     res = res_mat;
 
@@ -466,6 +481,11 @@ int pw_sqrt(const Mat_<Vec<_Tp, 2> > &base, Mat_<Vec<_Tp, 2> > &res)
 template<typename _Tp>
 int pw_less(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat_<Vec<_Tp, 2> > &res)
 {
+    if (!isGoodMat(left) || !isGoodMat(right) || !sameSize(left, right))
+    {
+    	return -1;
+    }
+
 	Mat_<Vec<_Tp, 2> > res_mat(left.dims, left.size);
     int N = left.total();
     complex<_Tp> *pleft = reinterpret_cast<complex<_Tp> *>(left.data), *pright = reinterpret_cast<complex<_Tp> *>(right.data),
@@ -512,6 +532,11 @@ int pw_less(const complex<_Tp> &alpha, const Mat_<Vec<_Tp, 2> > &right, Mat_<Vec
 template<typename _Tp>
 int pw_lesseq(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat_<Vec<_Tp, 2> > &res)
 {
+    if (!isGoodMat(left) || !isGoodMat(right) || !sameSize(left, right))
+    {
+    	return -1;
+    }
+
 	Mat_<Vec<_Tp, 2> > res_mat(left.dims, left.size);
     int N = left.total();
     complex<_Tp> *pleft = reinterpret_cast<complex<_Tp> *>(left.data), *pright = reinterpret_cast<complex<_Tp> *>(right.data),
@@ -557,6 +582,12 @@ int pw_lesseq(const complex<_Tp> &alpha, const Mat_<Vec<_Tp, 2> > &right, Mat_<V
 template<typename _Tp>
 int pw_max(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat_<Vec<_Tp, 2> > &res)
 {
+    if (!isGoodMat(left) || !isGoodMat(right) || !sameSize(left, right))
+    {
+    	return -1;
+    }
+//    CV_ASSERT(isGoodMat(left) && isGoodMat(right) && sameSize(left, right));
+
 	Mat_<Vec<_Tp, 2> > res_mat(left.dims, left.size);
     int N = right.total();
     complex<_Tp> *pleft = reinterpret_cast<complex<_Tp> *>(left.data),
@@ -588,6 +619,10 @@ int pw_max(const Mat_<Vec<_Tp, 2> > &left, const complex<_Tp> &alpha, Mat_<Vec<_
 template<typename _Tp>
 int pw_min(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat_<Vec<_Tp, 2> > &res)
 {
+    if (!isGoodMat(left) || !isGoodMat(right) || !sameSize(left, right))
+    {
+    	return -1;
+    }
 	Mat_<Vec<_Tp, 2> > res_mat(left.dims, left.size);
     int N = right.total();
     complex<_Tp> *pleft = reinterpret_cast<complex<_Tp> *>(left.data),
@@ -688,18 +723,17 @@ int mat_select(const Mat_<Vec<_Tp, 2> > &origin_mat, const SmartArray<SmartIntAr
 }
 
 template<typename _Tp>
-int mat_subfill(const Mat_<Vec<_Tp, 2> > &origin_mat, const SmartArray<SmartIntArray> &index_set_for_each_dim, const Mat_<Vec<_Tp, 2> > &sub_mat, Mat_<Vec<_Tp, 2> > &filled_mat)
+int mat_subfill(Mat_<Vec<_Tp, 2> > &origin_mat, const SmartArray<SmartIntArray> &index_set_for_each_dim, const Mat_<Vec<_Tp, 2> > &sub_mat)
 {
 	int dims = index_set_for_each_dim.len;
 	SmartIntArray start_pos1(dims);
 	SmartIntArray cur_pos1(dims);
-	SmartIntArray step1(dims);
+	SmartIntArray step1(dims, 1);
 	SmartIntArray end_pos1(dims);
 	SmartIntArray sel_idx(dims);
 	SmartArray<SmartIntArray> index_set_for_each_dim_cpy = index_set_for_each_dim.clone();
 	for (int i = 0; i < dims; ++i)
 	{
-		step1[i] = 1;
 		if (index_set_for_each_dim[i].len == 3 && index_set_for_each_dim[i][1] < 0)
 		{
 			const SmartIntArray &this_idx_set = index_set_for_each_dim[i];
@@ -718,7 +752,7 @@ int mat_subfill(const Mat_<Vec<_Tp, 2> > &origin_mat, const SmartArray<SmartIntA
 	}
 
 
-	Mat_<Vec<_Tp, 2> > origin_cpy = origin_mat.clone();
+//	Mat_<Vec<_Tp, 2> > origin_cpy = origin_mat.clone();
 //	filled_mat.create(origin_mat.dims, origin_mat.size);
 	{
 		int src_dims;
@@ -759,14 +793,14 @@ int mat_subfill(const Mat_<Vec<_Tp, 2> > &origin_mat, const SmartArray<SmartIntA
 			{
 				sel_idx[cur_dim] = index_set_for_each_dim_cpy[cur_dim][src_cur_pos[cur_dim]];
 			}
-			origin_cpy.template at<Vec<_Tp, 2> >(sel_idx) = sub_mat.template at<Vec<_Tp, 2> >(src_cur_pos);
+			origin_mat.template at<Vec<_Tp, 2> >(sel_idx) = sub_mat.template at<Vec<_Tp, 2> >(src_cur_pos);
 			//--
 
 			cur_dim = src_dims - 1;
 			src_cur_pos[cur_dim] += src_step[cur_dim];
 		}
 	}
-	filled_mat = origin_cpy;
+//	filled_mat = origin_cpy;
 
 	return 0;
 }
@@ -808,10 +842,10 @@ int pw_min(const Mat_<Vec<_Tp, 2> > &left, const complex<_Tp> &alpha, Mat_<Vec<_
 template<typename _Tp>
 int psnr(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, double &psnr, double &msr)
 {
-	if (left.dims != right.dims)
-	{
-		return -1;
-	}
+    if (!isGoodMat(left) || !isGoodMat(right) || !sameSize(left, right))
+    {
+    	return -1;
+    }
 
 	Mat_<Vec<_Tp, 2> > dif = left - right;
 	double msr_stat = 0.0;
@@ -840,75 +874,75 @@ int psnr(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, double
 /*
  * Current implementation allocates extra heap memory repeatedly. An in-place solution is found.
  */
-//template<typename _Tp>
-//int tensor_product(const SmartArray<Mat_<Vec<_Tp, 2> > > &components_for_each_dim, Mat_<Vec<_Tp, 2> >  &product)
-//{
-//	//TODO: make sure all input components are continuous mat, and row vectors.
-//	int ndims = components_for_each_dim.len;
-//	SmartIntArray dim_size(ndims);
-//	Mat sub_mat = components_for_each_dim[ndims - 1];    //row vector
-//	dim_size[ndims - 1] = components_for_each_dim[ndims - 1].total();
-//	for (int cur_dim = ndims - 2; cur_dim >= 0; --cur_dim)
-//	{
-//		const Mat &cur_dim_comp = components_for_each_dim[cur_dim];   // column vector;
-//		dim_size[cur_dim] = cur_dim_comp.total();
-//		sub_mat = cur_dim_comp.t() * sub_mat;	//This is a 2D matrix. Transpose is O(1) operation.
-//		sub_mat = sub_mat.reshape(0, 1);    //Convert to row vector. O(1) operation
-//	}
-//
-//
-//	// No need to zero.
-//	Mat product_mat(ndims, dim_size, DataType<Vec<_Tp, 2> >::type);
-//	std::copy(sub_mat.begin<Vec<_Tp, 2> >(), sub_mat.end<Vec<_Tp, 2> >(), product_mat.begin<Vec<_Tp, 2> >());
-////	memcpy((void*)product_mat.data, (void*)sub_mat.data, sub_mat.total() * sub_mat.elemSize());
-//	product = product_mat;
-//
-//	return 0;
-//}
-
 template<typename _Tp>
-int tensor_product(const SmartArray<Mat_<Vec<_Tp, 2> > > &components_at_dim, Mat_<Vec<_Tp, 2> >  &product)
+int tensor_product(const SmartArray<Mat_<Vec<_Tp, 2> > > &components_for_each_dim, Mat_<Vec<_Tp, 2> >  &product)
 {
 	//TODO: make sure all input components are continuous mat, and row vectors.
-	int ndims = components_at_dim.len;
-	SmartIntArray tensor_size(ndims);
-	int N = 1;
-	for (int i = 0; i < ndims; ++i)
+	int ndims = components_for_each_dim.len;
+	SmartIntArray dim_size(ndims);
+	Mat sub_mat = components_for_each_dim[ndims - 1];    //row vector
+	dim_size[ndims - 1] = components_for_each_dim[ndims - 1].total();
+	for (int cur_dim = ndims - 2; cur_dim >= 0; --cur_dim)
 	{
-		tensor_size[i] = components_at_dim[i].total();
-		N *= tensor_size[i];
+		const Mat &cur_dim_comp = components_for_each_dim[cur_dim];   // column vector;
+		dim_size[cur_dim] = cur_dim_comp.total();
+		sub_mat = cur_dim_comp.t() * sub_mat;	//This is a 2D matrix. Transpose is O(1) operation.
+		sub_mat = sub_mat.reshape(0, 1);    //Convert to row vector. O(1) operation
 	}
 
-	int sub_mat_size = tensor_size[ndims - 1];
-	Mat_<Vec<_Tp, 2> > tensor(ndims, tensor_size);
-	memcpy((void*)tensor.data, (void*)components_at_dim[ndims - 1].data, sub_mat_size * sizeof(complex<_Tp>));
-	complex<_Tp> *p0 = reinterpret_cast<complex<_Tp> *>(tensor.data),
-				 *p1 = p0 + sub_mat_size;
-	for (int i = ndims - 2; i >= 0; --i)
-	{
-		complex<_Tp> *p2 = reinterpret_cast<complex<_Tp> *>(components_at_dim[i].data);
 
-		int this_dim_size = components_at_dim[i].total();
-		for (int j = 1; j < this_dim_size; ++j)
-		{
-			complex<_Tp> a = *(p2 + j);
-			for (int k = 0; k < sub_mat_size; ++k)
-			{
-				*p1 = a * (*(p0 + k));
-				++p1;
-			}
-		}
+	// No need to zero.
+	Mat product_mat(ndims, dim_size, DataType<Vec<_Tp, 2> >::type);
+	std::copy(sub_mat.begin<Vec<_Tp, 2> >(), sub_mat.end<Vec<_Tp, 2> >(), product_mat.begin<Vec<_Tp, 2> >());
+//	memcpy((void*)product_mat.data, (void*)sub_mat.data, sub_mat.total() * sub_mat.elemSize());
+	product = product_mat;
 
-		for (int k = 0; k < sub_mat_size; ++k)
-		{
-			*(p0 + k) = (*p2) * (*(p0 + k));
-		}
-		sub_mat_size *= this_dim_size;
-	}
-
-	product = tensor;
 	return 0;
 }
+
+//template<typename _Tp>
+//int tensor_product(const SmartArray<Mat_<Vec<_Tp, 2> > > &components_at_dim, Mat_<Vec<_Tp, 2> >  &product)
+//{
+//	//TODO: make sure all input components are continuous mat, and row vectors.
+//	int ndims = components_at_dim.len;
+//	SmartIntArray tensor_size(ndims);
+//	int N = 1;
+//	for (int i = 0; i < ndims; ++i)
+//	{
+//		tensor_size[i] = components_at_dim[i].total();
+//		N *= tensor_size[i];
+//	}
+//
+//	int sub_mat_size = tensor_size[ndims - 1];
+//	Mat_<Vec<_Tp, 2> > tensor(ndims, tensor_size);
+//	memcpy((void*)tensor.data, (void*)components_at_dim[ndims - 1].data, sub_mat_size * sizeof(complex<_Tp>));
+//	complex<_Tp> *p0 = reinterpret_cast<complex<_Tp> *>(tensor.data),
+//				 *p1 = p0 + sub_mat_size;
+//	for (int i = ndims - 2; i >= 0; --i)
+//	{
+//		complex<_Tp> *p2 = reinterpret_cast<complex<_Tp> *>(components_at_dim[i].data);
+//
+//		int this_dim_size = components_at_dim[i].total();
+//		for (int j = 1; j < this_dim_size; ++j)
+//		{
+//			complex<_Tp> a = *(p2 + j);
+//			for (int k = 0; k < sub_mat_size; ++k)
+//			{
+//				*p1 = a * (*(p0 + k));
+//				++p1;
+//			}
+//		}
+//
+//		for (int k = 0; k < sub_mat_size; ++k)
+//		{
+//			*(p0 + k) = (*p2) * (*(p0 + k));
+//		}
+//		sub_mat_size *= this_dim_size;
+//	}
+//
+//	product = tensor;
+//	return 0;
+//}
 
 template<typename _Tp, int cn>
 void print_mat_details_g(const Mat_<Vec<_Tp, cn> > &mat, int field = cn, const string &filename = "cout")
@@ -1497,15 +1531,232 @@ int mat_border_extension(const Mat_<Vec<_Tp, 2> > &origin, const SmartIntArray &
 		}
 
 	}
-
-//	delete [] dst_pos;
-//	delete [] shift;
-//	delete [] start_pos;
-//	delete [] cur_pos;
-//	delete [] step;
-//	delete [] ext_size;
-
 	extended = ext_mat;
+	return 0;
+}
+
+template<typename _Tp>
+int interpolate(const Mat_<Vec<_Tp, 2> > &input, const SmartIntArray &times, Mat_<Vec<_Tp, 2> > &output)
+{
+	int ndims = input.dims;
+	if (ndims != times.len)
+	{
+		return -1;
+	}
+	SmartIntArray new_range(ndims, input.size);
+	SmartIntArray input_range(ndims, input.size);
+	for (int i = 0; i < ndims; ++i)
+	{
+		new_range[i] *= times[i];
+	}
+
+	SmartIntArray cur_pos1(ndims);
+	Mat_<Vec<_Tp, 2> > expanded(ndims, new_range, Vec<_Tp, 2>(0,0));
+	{
+		int src_dims;
+		SmartIntArray src_start_pos;
+		SmartIntArray src_cur_pos;
+		SmartIntArray src_step;
+		SmartIntArray src_end_pos;
+
+		//User-Defined initialization
+		src_dims = ndims;
+		src_start_pos = SmartIntArray(ndims, 0);
+		src_cur_pos = cur_pos1;
+		src_step = SmartIntArray(ndims, 1);
+		src_end_pos = input_range;
+		//--
+
+		int cur_dim = src_dims - 1;
+		while(true)
+		{
+			while (cur_dim >= 0 && src_cur_pos[cur_dim] >= src_end_pos[cur_dim])
+			{
+				src_cur_pos[cur_dim] = src_start_pos[cur_dim];
+				--cur_dim;
+				if (cur_dim >= 0)
+				{
+					src_cur_pos[cur_dim] += src_step[cur_dim];
+					continue;
+				}
+			}
+
+			if (cur_dim < 0)
+			{
+				break;
+			}
+
+			//User-Defined actions
+			SmartIntArray cur_pos2 = cur_pos1.clone();
+			SmartIntArray step2(ndims);
+			for (int i = 0; i < ndims; ++i)
+			{
+				cur_pos2[i] *= times[i];
+				step2[i] = cur_pos2[i] + times[i];
+			}
+			{
+				int src_dims;
+				SmartIntArray src_start_pos;
+				SmartIntArray src_cur_pos;
+				SmartIntArray src_step;
+				SmartIntArray src_end_pos;
+
+				//User-Defined initialization
+				src_dims = ndims;
+				src_start_pos = cur_pos2.clone();
+				src_cur_pos = cur_pos2;
+				src_step = SmartIntArray(ndims, 1);
+				src_end_pos = step2;
+				//--
+
+				int cur_dim = src_dims - 1;
+				while(true)
+				{
+					while (cur_dim >= 0 && src_cur_pos[cur_dim] >= src_end_pos[cur_dim])
+					{
+						src_cur_pos[cur_dim] = src_start_pos[cur_dim];
+						--cur_dim;
+						if (cur_dim >= 0)
+						{
+							src_cur_pos[cur_dim] += src_step[cur_dim];
+							continue;
+						}
+					}
+
+					if (cur_dim < 0)
+					{
+						break;
+					}
+
+					expanded.template at<Vec<_Tp, 2> >(src_cur_pos) = input.template at<Vec<_Tp, 2> >(cur_pos1);
+
+					cur_dim = src_dims - 1;
+					src_cur_pos[cur_dim] += src_step[cur_dim];
+				}
+			}
+			//--
+
+			cur_dim = src_dims - 1;
+			src_cur_pos[cur_dim] += src_step[cur_dim];
+		}
+	}
+
+	output = expanded;
+
+	return 0;
+}
+
+template<typename _Tp>
+int md_filtering(const Mat_<Vec<_Tp, 2> > &input, const Mat_<Vec<_Tp, 2> > &filter, const SmartIntArray &center, Mat_<Vec<_Tp, 2> > &filtered)
+{
+	int input_dims = input.dims;
+	SmartIntArray start_pos1(input_dims);
+	SmartIntArray cur_pos1(input_dims);
+	SmartIntArray step1(input_dims, 1);
+	SmartIntArray range1(input_dims, filter.size);
+
+
+	Mat_<Vec<_Tp, 2> > full_filter(input.dims, input.size, Vec<_Tp, 2>(0,0));
+	{
+		int src_dims;
+		SmartIntArray src_start_pos;
+		SmartIntArray src_cur_pos;
+		SmartIntArray src_step;
+		SmartIntArray src_end_pos;
+
+		//User-Defined initialization
+		src_dims = input_dims;
+		src_start_pos = start_pos1;
+		src_cur_pos = cur_pos1;
+		src_step = step1;
+		src_end_pos = range1;
+		//--
+
+		int cur_dim = src_dims - 1;
+		while(true)
+		{
+			while (cur_dim >= 0 && src_cur_pos[cur_dim] >= src_end_pos[cur_dim])
+			{
+				src_cur_pos[cur_dim] = src_start_pos[cur_dim];
+				--cur_dim;
+				if (cur_dim >= 0)
+				{
+					src_cur_pos[cur_dim] += src_step[cur_dim];
+					continue;
+				}
+			}
+
+			if (cur_dim < 0)
+			{
+				break;
+			}
+
+			//User-Defined actions
+			full_filter.template at<Vec<_Tp, 2> >(src_cur_pos) = filter.template at<Vec<_Tp, 2> >(src_cur_pos);
+			//--
+
+			cur_dim = src_dims - 1;
+			src_cur_pos[cur_dim] += src_step[cur_dim];
+		}
+	}
+
+
+	Mat_<Vec<_Tp, 2> > fd_filter, fd_input;
+	normalized_fft<_Tp>(full_filter, fd_filter);
+	normalized_fft<_Tp>(input, fd_input);
+	pw_mul<_Tp>(fd_input, fd_filter, fd_input);
+	cur_pos1 = SmartIntArray::konst(input_dims, 0);
+	range1 = SmartIntArray(input_dims, fd_input.size);
+	{
+		int src_dims;
+		SmartIntArray src_start_pos;
+		SmartIntArray src_cur_pos;
+		SmartIntArray src_step;
+		SmartIntArray src_end_pos;
+
+		//User-Defined initialization
+		src_dims = input_dims;
+		src_start_pos = start_pos1;
+		src_cur_pos = cur_pos1;
+		src_step = step1;
+		src_end_pos = range1;
+		//--
+
+		int cur_dim = src_dims - 1;
+		while(true)
+		{
+			while (cur_dim >= 0 && src_cur_pos[cur_dim] >= src_end_pos[cur_dim])
+			{
+				src_cur_pos[cur_dim] = src_start_pos[cur_dim];
+				--cur_dim;
+				if (cur_dim >= 0)
+				{
+					src_cur_pos[cur_dim] += src_step[cur_dim];
+					continue;
+				}
+			}
+			if (cur_dim < 0)
+			{
+				break;
+			}
+
+
+			//User-Defined actions
+			double dot = 0.0;
+			for (int i = 0; i < src_dims; ++i)
+			{
+				dot += (double)center[i] * src_cur_pos[i] / range1[i];
+			}
+			fd_input.template at<complex<_Tp> >(src_cur_pos) *= complex<_Tp>(cos(2 * M_PI * dot), sin(2 * M_PI * dot));
+			//--
+
+			cur_dim = src_dims - 1;
+			src_cur_pos[cur_dim] += src_step[cur_dim];
+		}
+	}
+	normalized_ifft<_Tp>(fd_input, filtered);
+
+	filtered = filtered * sqrt(filtered.total());
 
 	return 0;
 }

@@ -383,7 +383,6 @@ int downsample_in_fd_by2(const Mat_<Vec<_Tp, 2> > &filter, SmartIntArray &folds,
 		}
 
 	}
-
 	folded_filter = folded_mat;
 	support = supp_set;
 
@@ -437,7 +436,7 @@ int construct_1d_filter_system(const Mat_<Vec<_Tp, 2> > &x_pts, const OneD_FS_Pa
 		}
 
 		this_filter.isLowPass = false;
-		if (this_filter_param.cL - this_filter_param.epL < 0 && this_filter_param.cR + this_filter_param.epR >= 0)
+		if (this_filter_param.cL - this_filter_param.epL < 0 && this_filter_param.cR + this_filter_param.epR > 0)
 		{
 			this_filter.isLowPass = true;
 		}
@@ -446,7 +445,6 @@ int construct_1d_filter_system(const Mat_<Vec<_Tp, 2> > &x_pts, const OneD_FS_Pa
 		Mat_<Vec<_Tp, 2> > shift_left_filter;
 
 		fchi<_Tp>(shift_right_x, this_filter_param, opt, shift_right_filter);
-		//TODO need check the conversion.
 		fchi<_Tp>(x_pts, this_filter_param, opt, this_filter.coefs);
 		fchi<_Tp>(shift_left_x, this_filter_param, opt, shift_left_filter);
 
@@ -460,7 +458,7 @@ int construct_1d_filter_system(const Mat_<Vec<_Tp, 2> > &x_pts, const OneD_FS_Pa
 
 		SmartArray<SmartIntArray> supp;
 		//TODO need check the conversion.
-		downsample_in_fd_by2<_Tp>((const Mat_<Vec<_Tp, 2> > &)this_filter.coefs, ds_folds, (Mat_<Vec<_Tp, 2> > &)this_filter.folded_coefs, supp);
+		downsample_in_fd_by2<_Tp>(this_filter.coefs, ds_folds, this_filter.folded_coefs, supp);
 
 		//Simplify the support coordinates by removing the first dim.
 		SmartIntArray reduced_supp(supp.len);
@@ -477,16 +475,71 @@ int construct_1d_filter_system(const Mat_<Vec<_Tp, 2> > &x_pts, const OneD_FS_Pa
 	return 0;
 }
 
-//Here we use vector instead of SmartArray, because we don't know filter number until all filters are constructed.
-// Need a macro switch here
-typedef vector<vector<Mat_<Vec<double, 2> > > > ML_MC_Coefs_Set;
-typedef vector<vector<double> > ML_MC_Filter_Norms_Set;
+// Here we use vector instead of SmartArray, because it is quite difficult to to know filter number
+// before all filters are constructed.
+// Need a macro switch between Mat_<Vec<double,2> > and Mat_<Vec<float,2> >.
+
+template<typename _Tp>
+struct ML_MC_Coefs_Set
+{
+public:
+	typedef vector<vector<Mat_<Vec<_Tp, 2> > > > type;
+};
+
+template<typename _Tp>
+struct MC_Coefs_Set
+{
+	typedef vector<Mat_<Vec<_Tp, 2> > > type;
+};
+
+template<typename _Tp>
+struct ML_MC_Filter_Norms_Set
+{
+	typedef vector<vector<_Tp> > type;
+};
+
+template<typename _Tp>
+struct MC_Filter_Norms_Set
+{
+	typedef vector<_Tp> type;
+};
+
+int figure_good_mat_size(const ML_MD_FS_Param &fs_param, const SmartIntArray &mat_size, SmartIntArray &border);
+
+template<typename _Tp>
+int check_mat_to_decompose(const ML_MD_FS_Param &fs_param, const Mat_<Vec<_Tp, 2> > &mat)
+{
+	SmartIntArray mat_size(mat.dims, mat.size);
+	SmartIntArray good_mat_size(mat.dims, 1);
+
+	for (int i = 0; i < fs_param.nlevels; ++i)
+	{
+		for (int j = 0; j < fs_param.ndims; ++j)
+		{
+			const OneD_FS_Param &this_dim_param = fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j];
+			for (int k = 0; k < this_dim_param.highpass_ds_folds.len; ++k)
+			{
+				if (mat_size[j] % this_dim_param.highpass_ds_folds[k] != 0)
+				{
+					return -1;
+				}
+			}
+			if (mat_size[j] % this_dim_param.lowpass_ds_fold != 0)
+			{
+				return -2;
+			}
+			mat_size[j] /= this_dim_param.lowpass_ds_fold;
+		}
+	}
+
+	return 0;
+}
 
 /*
  * One-D filters are constructed and stored in 'ml_md_filter_sytem' for use in reconstruction procedure.
  */
 template<typename _Tp>
-int decompose_by_ml_md_filter_bank(const ML_MD_FS_Param &filter_system_param, const Mat_<Vec<_Tp, 2> > &input, ML_MD_FSystem<_Tp> &ml_md_filter_system, ML_MC_Filter_Norms_Set &norms_set, ML_MC_Coefs_Set &coefs_set)
+int decompose_by_ml_md_filter_bank(const ML_MD_FS_Param &filter_system_param, const Mat_<Vec<_Tp, 2> > &input, ML_MD_FSystem<_Tp> &ml_md_filter_system, typename ML_MC_Filter_Norms_Set<_Tp>::type &norms_set, typename ML_MC_Coefs_Set<_Tp>::type &coefs_set)
 {
 
 	if (filter_system_param.nlevels < 1
@@ -503,14 +556,14 @@ int decompose_by_ml_md_filter_bank(const ML_MD_FS_Param &filter_system_param, co
 	coefs_set.resize(levels);
 	norms_set.reserve(levels);
 	norms_set.resize(levels);
-	// Every Level
+
 	// This mat is to store product of low-pass filters of previous levels.
 	Mat_<Vec<_Tp, 2> > last_lowpass_product;
 	ml_md_filter_system = ML_MD_FSystem<_Tp>(levels, input_dims);
 	for (int cur_lvl = 0; cur_lvl < levels; ++cur_lvl)
 	{
 
-		// This mat is refered to as low-pass output last level.
+		// This mat is referred to as low-pass channel output last level.
 		Mat_<Vec<_Tp, 2> > last_approx;
 		Mat_<Vec<_Tp, 2> > last_approx_center_part;
 
@@ -522,7 +575,7 @@ int decompose_by_ml_md_filter_bank(const ML_MD_FS_Param &filter_system_param, co
 		else
 		{
 			last_approx = coefs_set[cur_lvl - 1][coefs_set[cur_lvl - 1].size() - 1];
-			coefs_set[cur_lvl - 1].pop_back();
+//			coefs_set[cur_lvl - 1].pop_back();
 		}
 
 		// This is the size of full filters at this level.
@@ -613,7 +666,7 @@ int decompose_by_ml_md_filter_bank(const ML_MD_FS_Param &filter_system_param, co
 					supp_after_ds_at_dim[i]= this_filter.support_after_ds;
 					//TODO here is conversion from Mat to Mat_
 					lowpass_filter_center_part_at_dim[i] = this_filter.coefs.colRange(lowpass_center_range_at_dim[i][0],
-							                                                                                           lowpass_center_range_at_dim[i][2] + 1);
+							                                                          lowpass_center_range_at_dim[i][2] + 1);
 					is_lowpass = is_lowpass && this_filter.isLowPass;
 					highpass_ds_prod *= this_filter.highpass_ds_fold;
 				}
@@ -684,7 +737,7 @@ int decompose_by_ml_md_filter_bank(const ML_MD_FS_Param &filter_system_param, co
 					{
 						// At first level, 'last_lowpass_product' is regarded as I.
 						// lpnorm always return double-value.
-						double l2norm = lpnorm<_Tp>(folded_md_filter, (_Tp)2);
+						double l2norm = lpnorm<_Tp>(folded_md_filter, static_cast<_Tp>(2));
 						norms_set[cur_lvl].push_back(l2norm / sqrt(input_size_prod) * sqrt(highpass_ds_prod));
 					}
 					else
@@ -763,7 +816,7 @@ int decompose_by_ml_md_filter_bank(const ML_MD_FS_Param &filter_system_param, co
 }
 
 template<typename _Tp>
-int reconstruct_by_ml_md_filter_bank(const ML_MD_FS_Param &fs_param, const ML_MD_FSystem<_Tp> &filter_system, const ML_MC_Coefs_Set &coefs_set, Mat_<Vec<_Tp, 2> > &rec)
+int reconstruct_by_ml_md_filter_bank(const ML_MD_FS_Param &fs_param, const ML_MD_FSystem<_Tp> &filter_system, const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, Mat_<Vec<_Tp, 2> > &rec)
 {
 	int nlevels = fs_param.nlevels;
 	int ndims = fs_param.ndims;
@@ -778,11 +831,11 @@ int reconstruct_by_ml_md_filter_bank(const ML_MD_FS_Param &fs_param, const ML_MD
 	Mat_<Vec<_Tp, 2> > this_level_lowpass_approx;
 	for (int cur_lvl = nlevels - 1; cur_lvl >= 0; --cur_lvl)
 	{
-		const vector<Mat_<Vec<_Tp, 2> > > &this_level_coefs_set = coefs_set[cur_lvl];
+		const typename MC_Coefs_Set<_Tp>::type &this_level_coefs_set = coefs_set[cur_lvl];
 		const MD_FSystem<_Tp> &this_level_fs = filter_system.md_fs_at_level[cur_lvl];
 		if (cur_lvl == nlevels - 1)
 		{
-			this_level_lowpass_approx = static_cast<Mat_<Vec<_Tp, 2> > >(this_level_coefs_set[this_level_coefs_set.size() - 1].clone());
+			this_level_lowpass_approx = this_level_coefs_set[this_level_coefs_set.size() - 1].clone();
 			normalized_fft<_Tp>(this_level_lowpass_approx, this_level_lowpass_approx);
 			center_shift<_Tp>(this_level_lowpass_approx, this_level_lowpass_approx);
 		}
@@ -864,7 +917,7 @@ int reconstruct_by_ml_md_filter_bank(const ML_MD_FS_Param &fs_param, const ML_MD
 					chosen_ds_filter_at_dim[i] = this_filter.folded_coefs;
 					supp_after_ds_at_dim[i]= this_filter.support_after_ds;
 					lowpass_filter_center_part_at_dim[i] = this_filter.coefs.colRange(lowpass_center_range_at_dim[i][0],
-							                                                                                           lowpass_center_range_at_dim[i][2] + 1);
+							                                                          lowpass_center_range_at_dim[i][2] + 1);
 					is_lowpass = is_lowpass && this_filter.isLowPass;
 				}
 
@@ -875,7 +928,7 @@ int reconstruct_by_ml_md_filter_bank(const ML_MD_FS_Param &fs_param, const ML_MD
 //					lowpass_filter += md_filter;
 					Mat_<Vec<_Tp, 2> > md_filter_center_part;
 					tensor_product<_Tp>(lowpass_filter_center_part_at_dim, md_filter_center_part);
-					pw_pow<_Tp>(md_filter_center_part, (_Tp)2, md_filter_center_part);
+					pw_pow<_Tp>(md_filter_center_part, static_cast<_Tp>(2), md_filter_center_part);
 					if (lowpass_filter.empty())
 					{
 						lowpass_filter = md_filter_center_part;
@@ -887,7 +940,7 @@ int reconstruct_by_ml_md_filter_bank(const ML_MD_FS_Param &fs_param, const ML_MD
 				}
 				else
 				{
-					Mat_<Vec<_Tp, 2> > this_channel_coef = static_cast<Mat_<Vec<_Tp, 2> > >(this_level_coefs_set[coef_index].clone());
+					Mat_<Vec<_Tp, 2> > this_channel_coef = this_level_coefs_set[coef_index].clone();
 
 					// To change phase of the coef
 //					SmartArray<Mat> ones_for_each_dim(sig_dims);
@@ -913,9 +966,8 @@ int reconstruct_by_ml_md_filter_bank(const ML_MD_FS_Param &fs_param, const ML_MD
 					Mat_<Vec<_Tp, 2> > expanded_coef(ndims, this_level_full_filter_size_at_dim, Vec<_Tp, 2>(0,0));
 					Mat_<Vec<_Tp, 2> > ds_filter;
 					tensor_product<_Tp>(chosen_ds_filter_at_dim, ds_filter);
-//					mat_select(md_filter, supp_after_ds_at_dim, filter_subarea);
 					pw_mul<_Tp>(this_channel_coef, ds_filter, this_channel_coef);
-					mat_subfill<_Tp>(expanded_coef, supp_after_ds_at_dim, this_channel_coef, expanded_coef);
+					mat_subfill<_Tp>(expanded_coef, supp_after_ds_at_dim, this_channel_coef);
 
 					this_level_highpass_sum += expanded_coef;
 					++coef_index;
@@ -935,7 +987,7 @@ int reconstruct_by_ml_md_filter_bank(const ML_MD_FS_Param &fs_param, const ML_MD
 			pw_mul<_Tp>(this_level_lowpass_approx, lowpass_filter, this_level_lowpass_approx);
 
 			Mat_<Vec<_Tp, 2> > expanded_coef(ndims, this_level_full_filter_size_at_dim, Vec<_Tp, 2>(0,0));
-			mat_subfill<_Tp>(expanded_coef, lowpass_center_range_at_dim, this_level_lowpass_approx, expanded_coef);
+			mat_subfill<_Tp>(expanded_coef, lowpass_center_range_at_dim, this_level_lowpass_approx);
 			upper_level_lowpass_approx = this_level_highpass_sum + expanded_coef;
 		}
 

@@ -27,3 +27,26 @@ int nchoosek(int n, int k)
 
 	return num;
 }
+
+int hcf_lcd(int n, int m, int &hcf, int &lcd)
+{
+	if (n < m)
+	{
+		int tmp = n;
+		n = m;
+		m = tmp;
+	}
+
+	int p = n * m;
+	while (m != 0)
+	{
+		int r = n % m;
+		n = m;
+		m = r;
+	}
+
+	hcf = n;
+	lcd = p / n;
+
+	return 0;
+}
