@@ -1,0 +1,39 @@
+1. Download and Unpack source codes of FFTW and OpenCV. Suppose the root directories are 'fftw/' and 'opencv/' respectively.
+2. Build FFTW.
+  2.1) Enter fftw/.
+  2.2) Run commnds below one by one. 'fftw$' is prompt.
+       fftw$ ./configure
+       fftw$ make
+       fftw$ make install
+       
+       Note: the third command need ROOT previlege.
+
+  2.3) If commands run OK, the FFTW would be installed in default directory. In Linux, the libraries would be in /usr/local/lib, while
+       the headers would be in /usr/local/include
+
+3. Build OpenCV
+   3.1) Enter opencv/
+   3.2) Run commnds below one by one.
+        opencv$ ./configure
+        opencv$ make
+        opencv$ make install
+       
+        Note: the third command need ROOT previlege.
+
+   3.3) If commands run OK, the OpenCV would be installed in default directory. In Linux, the libraries would be in /usr/local/lib, while
+        the headers would be in /usr/local/include
+
+4. Build Our Own Package.
+   4.1) Enter cityu-wavelets-2.0/
+   4.2) Open the txt file of 'MakeFile' and check if the path following '-I' in line of 'CPP_FLAGS' is where the headers above are installed.
+        Also, check if the path following '-L' in line of 'LD_FLAGS' is where the libraries above are installed.
+        For example, if in Linux, the two lines should look like below,
+
+	export CPP_FLAGS=-g -Wall -O3 -I/usr/local/include
+	export LD_FLAGS=-L/usr/local/lib
+
+   4.3) Run command
+        opencv$ make -f MakeFile
+
+   4.4) If everything is OK, you will see executable file 'cityu-wavelets-2.0' in current directory.
+
