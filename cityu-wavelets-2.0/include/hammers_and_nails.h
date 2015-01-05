@@ -1,7 +1,8 @@
 #ifndef _HAMMERS_AND_NAILS_H
 #define _HAMMERS_AND_NAILS_H
 
-#include <tr1/memory>
+//#include <tr1/memory>
+#include <memory>
 #include <cstring>
 #include <map>
 #include <string>
@@ -28,7 +29,7 @@ struct SmartArray
 		{
 			// Make sure constructors are invoked.
 			T *blk = new T[len]();
-			p = tr1::shared_ptr<T>(blk, array_deleter<T>());
+			p = shared_ptr<T>(blk, array_deleter<T>());
 		}
 	}
 
@@ -37,7 +38,7 @@ struct SmartArray
 		if (len > 0)
 		{
 			T *blk = new T[len]();
-			p = tr1::shared_ptr<T>(blk, array_deleter<T>());
+			p = shared_ptr<T>(blk, array_deleter<T>());
 			for (int i = 0; i < len; ++i)
 			{
 				p.get()[i] = k;
@@ -52,7 +53,7 @@ struct SmartArray
 			// Make sure that copy constructors are invoked.
 			T *copy = new T[len]();
 			std::copy(data, data + len, copy);
-			p = tr1::shared_ptr<T>(copy, array_deleter<T>());
+			p = shared_ptr<T>(copy, array_deleter<T>());
 		}
 	}
 
@@ -64,7 +65,7 @@ struct SmartArray
 		{
 			len = n;
 			T *blk = new T[len]();
-			p = tr1::shared_ptr<T>(blk, array_deleter<T>());
+			p = shared_ptr<T>(blk, array_deleter<T>());
 		}
 	}
 
@@ -102,7 +103,7 @@ struct SmartArray
     }
 
     int len;
-    tr1::shared_ptr<T> p;
+    shared_ptr<T> p;
 };
 
 typedef SmartArray<int> SmartIntArray;

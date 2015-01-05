@@ -492,7 +492,7 @@ int pw_less(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat
     		     *pres  = reinterpret_cast<complex<_Tp> *>(res_mat.data);
     for (int i = 0; i < N; ++i, ++pleft, ++pright, ++pres)
     {
-    	(*pres).real() = (*pleft).real() < (*pright).real();
+    	(*pres).real( (*pleft).real() < (*pright).real() );
     }
     res = res_mat;
 
@@ -508,7 +508,7 @@ int pw_less(const Mat_<Vec<_Tp, 2> > &left, const complex<_Tp> &alpha, Mat_<Vec<
     		     *pres  = reinterpret_cast<complex<_Tp> *>(res_mat.data);
     for (int i = 0; i < N; ++i, ++pleft, ++pres)
     {
-    	(*pres).real() = (*pleft).real() < alpha.real();
+    	(*pres).real( (*pleft).real() < alpha.real() );
     }
     res = res_mat;
 	return 0;
@@ -523,7 +523,7 @@ int pw_less(const complex<_Tp> &alpha, const Mat_<Vec<_Tp, 2> > &right, Mat_<Vec
     		     *pres  = reinterpret_cast<complex<_Tp> *>(res_mat.data);
     for (int i = 0; i < N; ++i, ++pright, ++pres)
     {
-    	(*pres).real() = alpha.real() < (*pright).real();
+    	(*pres).real( alpha.real() < (*pright).real() );
     }
     res = res_mat;
 	return 0;
@@ -543,7 +543,7 @@ int pw_lesseq(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, M
     		     *pres  = reinterpret_cast<complex<_Tp> *>(res_mat.data);
     for (int i = 0; i < N; ++i, ++pleft, ++pright, ++pres)
     {
-    	(*pres).real() = (*pleft).real() <= (*pright).real();
+    	(*pres).real( (*pleft).real() <= (*pright).real() );
     }
     res = res_mat;
 	return 0;
@@ -558,7 +558,7 @@ int pw_lesseq(const Mat_<Vec<_Tp, 2> > &left, const complex<_Tp> &alpha, Mat_<Ve
     		     *pres  = reinterpret_cast<complex<_Tp> *>(res_mat.data);
     for (int i = 0; i < N; ++i, ++pleft, ++pres)
     {
-    	(*pres).real() = (*pleft).real() <= alpha.real();
+    	(*pres).real( (*pleft).real() <= alpha.real() );
     }
     res = res_mat;
 	return 0;
@@ -573,7 +573,7 @@ int pw_lesseq(const complex<_Tp> &alpha, const Mat_<Vec<_Tp, 2> > &right, Mat_<V
     		     *pres  = reinterpret_cast<complex<_Tp> *>(res_mat.data);
     for (int i = 0; i < N; ++i, ++pright, ++pres)
     {
-    	(*pres).real() = alpha.real() <= (*pright).real();
+    	(*pres).real( alpha.real() <= (*pright).real() );
     }
     res = res_mat;
 	return 0;
@@ -595,7 +595,7 @@ int pw_max(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat_
     		     *pres  = reinterpret_cast<complex<_Tp> *>(res_mat.data);
     for (int i = 0; i < N; ++i, ++pleft, ++pright, ++pres)
     {
-    	(*pres).real() = max((*pleft).real(), (*pright).real());
+    	(*pres).real( max((*pleft).real(), (*pright).real()) );
     }
     res = res_mat;
 	return 0;
@@ -610,7 +610,7 @@ int pw_max(const Mat_<Vec<_Tp, 2> > &left, const complex<_Tp> &alpha, Mat_<Vec<_
     		     *pres  = reinterpret_cast<complex<_Tp> *>(res_mat.data);
     for (int i = 0; i < N; ++i, ++pleft, ++pres)
     {
-    	(*pres).real() = max((*pleft).real(), alpha.real());
+    	(*pres).real( max((*pleft).real(), alpha.real()) );
     }
     res = res_mat;
 	return 0;
@@ -630,7 +630,7 @@ int pw_min(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat_
     		     *pres  = reinterpret_cast<complex<_Tp> *>(res_mat.data);
     for (int i = 0; i < N; ++i, ++pleft, ++pright, ++pres)
     {
-    	(*pres).real() = min((*pleft).real(), (*pright).real());
+    	(*pres).real( min((*pleft).real(), (*pright).real()) );
     }
     res = res_mat;
 	return 0;

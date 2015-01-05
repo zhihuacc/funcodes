@@ -575,7 +575,7 @@ int decompose_by_ml_md_filter_bank(const ML_MD_FS_Param &filter_system_param, co
 		else
 		{
 			last_approx = coefs_set[cur_lvl - 1][coefs_set[cur_lvl - 1].size() - 1];
-//			coefs_set[cur_lvl - 1].pop_back();
+			coefs_set[cur_lvl - 1].pop_back();
 		}
 
 		// This is the size of full filters at this level.

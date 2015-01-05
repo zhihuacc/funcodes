@@ -35,8 +35,11 @@ int Unit_Test::decomposition_test(int argc, char **argv)
 	}
 
 	ML_MD_FSystem<double> filter_system;
-	typename ML_MC_Coefs_Set<double>::type coefs_set;
-	typename ML_MC_Filter_Norms_Set<double>::type norms_set;
+//	typename ML_MC_Coefs_Set<double>::type coefs_set;
+//	typename ML_MC_Filter_Norms_Set<double>::type norms_set;
+
+	ML_MC_Coefs_Set<double>::type coefs_set;
+	ML_MC_Filter_Norms_Set<double>::type norms_set;
 
 	clock_t t0 = tic();
 	decompose_by_ml_md_filter_bank<double>(fs_param, mat, filter_system, norms_set, coefs_set);
@@ -60,7 +63,7 @@ int Unit_Test::decomposition_test(int argc, char **argv)
 int Unit_Test::reconstruction_test(int argc, char **argv)
 {
 #define RECONSTRUCT_FLOAT_TYPE double
-	string filename("Test-Data/mobile2.avi");
+	string filename("Test-Data/coastguard144.avi");
 //	string output_filename("Test-Data/output/gflower.avi");
 	Media_Format mfmt;
 	Mat_<Vec<RECONSTRUCT_FLOAT_TYPE, 2> > mat, mat_ext, mat_cut;
@@ -115,28 +118,21 @@ int Unit_Test::reconstruction_test(int argc, char **argv)
 	}
 
 	SmartIntArray border(mat.dims, 32);
-//	for (int i = 0; i < nd; ++i)
-//	{
-//		border[i] = ((mat.size[i] + 16) & (~((1 << nlevels) - 1))) - mat.size[i];
-//	}
 
 	SmartIntArray mat_size(mat.dims, mat.size);
 	figure_good_mat_size(fs_param, mat_size, border);
+	border[0] = 12;
+	border[1] = 16;
+	border[2] = 16;
 
 	mat_border_extension<RECONSTRUCT_FLOAT_TYPE>(mat, border, "sym", mat_ext);
 //	mat_ext = mat;
 //	save_as_media<double>("Test-Data/output/Lena512-ext.png", mat_ext, &mfmt);
 
-	Mat_<Vec<RECONSTRUCT_FLOAT_TYPE, 2> > fd_mat;
-	normalized_fft<RECONSTRUCT_FLOAT_TYPE>(mat_ext, fd_mat);
-	center_shift<RECONSTRUCT_FLOAT_TYPE>(fd_mat, fd_mat);
-//	save_as_media<double>("Test-Data/output/Lena512-ext-fd.png", fd_mat, &mfmt);
-
-//	return 0;
 
 	ML_MD_FSystem<RECONSTRUCT_FLOAT_TYPE> filter_system;
-	typename ML_MC_Coefs_Set<RECONSTRUCT_FLOAT_TYPE>::type coefs_set;
-	typename ML_MC_Filter_Norms_Set<RECONSTRUCT_FLOAT_TYPE>::type norms_set;
+	ML_MC_Coefs_Set<RECONSTRUCT_FLOAT_TYPE>::type coefs_set;
+	ML_MC_Filter_Norms_Set<RECONSTRUCT_FLOAT_TYPE>::type norms_set;
 
 	int check = check_mat_to_decompose<RECONSTRUCT_FLOAT_TYPE>(fs_param, mat_ext);
 	if (check)
@@ -151,15 +147,6 @@ int Unit_Test::reconstruction_test(int argc, char **argv)
 	cout << "Dec Time: " << endl << msg << endl;
 	mat_ext.release();
 
-//	for (int i = 0; i < (int)coefs_set.size(); ++i)
-//	{
-//		for (int j = 0; j < (int)coefs_set[i].size(); ++j)
-//		{
-//			stringstream ss;
-//			ss <<  "Test-Data/output/coef-" << i << "-" << j << ".jpg";
-//			save_as_media<RECONSTRUCT_FLOAT_TYPE>(ss.str(), coefs_set[i][j], &mfmt);
-//		}
-//	}
 
 	Mat_<Vec<RECONSTRUCT_FLOAT_TYPE, 2> > rec;
 	t0 = tic();

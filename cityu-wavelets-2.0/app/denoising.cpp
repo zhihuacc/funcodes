@@ -41,7 +41,7 @@ int bishrink(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, d
 	int nd = coefs_set[0][0].dims;
 	int nlevels = coefs_set.size();
 	SmartIntArray winsize(nd, wwidth);
-	Mat avg_window(nd, (const int *)winsize, CV_64FC2, Scalar(1.0 / pow(wwidth, nd),0));
+	Mat avg_window(nd, winsize, CV_64FC2, Scalar(1.0 / pow(wwidth, nd),0));
 
 	typename ML_MC_Coefs_Set<_Tp>::type new_coefs_set;
 	new_coefs_set.reserve(coefs_set.size());
@@ -128,7 +128,7 @@ int local_soft(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth,
 			complex<_Tp> infinitesimal(1e-16, 0);
 
 			pw_abs<_Tp>(Y, Y_abs);
-			pw_pow<_Tp>(Y_abs, (_Tp)2, T);
+			pw_pow<_Tp>(Y_abs, static_cast<_Tp>(2), T);
 			md_filtering<_Tp>(T, avg_window, anchor, T);
 
 			T -= Scalar(sigma * sigma, 0);
@@ -144,6 +144,9 @@ int local_soft(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth,
 			pw_max<_Tp>(Y_abs, infinitesimal, Y_abs);
 			Mat_<Vec<_Tp, 2> > ratio;
 			pw_div<_Tp>(T, Y_abs, ratio);
+
+			T.release();
+
 			ratio = Scalar(1.0,0) - ratio;
 			// ratio is ready
 
@@ -185,7 +188,7 @@ int local_adapt(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth
 			complex<_Tp> infinitesimal(1e-16, 0);
 			pw_abs<_Tp>(Y, Y_abs);
 			md_filtering<_Tp>(Y_abs, avg_window, anchor, T);
-			pw_pow<_Tp>(T, (_Tp)2, T);
+			pw_pow<_Tp>(T, static_cast<_Tp>(2), T);
 
 			T -= Scalar(sigma * sigma, 0);
 			pw_max<_Tp>(T, infinitesimal, T);
@@ -199,6 +202,9 @@ int local_adapt(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth
 			pw_max<_Tp>(Y_abs, infinitesimal, Y_abs);
 			Mat_<Vec<_Tp, 2> > ratio;
 			pw_div<_Tp>(T, Y_abs, ratio);
+
+			T.release();
+
 			ratio = Scalar(1.0,0) - ratio;
 			// ratio is ready
 
@@ -207,6 +213,10 @@ int local_adapt(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth
 			pw_mul<_Tp>(mask, new_Y, new_Y);
 
 			new_coefs_set[cur_lvl][idx] = new_Y;
+
+//			stringstream ss;
+//			ss << "Test-Data/output/new-coef-" << cur_lvl << "-" << idx <<".txt";
+//			print_mat_details_g<_Tp>(new_Y, 2, ss.str());
 		}
 	}
 
@@ -247,9 +257,9 @@ int app_denoising()
 	double stddev = 5;
 	double c = 1;
 	double wwidth = 7;
-	string thr_opt("bishrink");
+	string thr_opt("localsoft");
 
-	string img_names("Test-Data/Lena512.png");
+	string img_names("Test-Data/coastguard144.avi");
 
 	Media_Format mfmt;
 	Mat_<Vec<double, 2> > mat, noisy_img, mat_ext, mat_cut, rec;
@@ -261,6 +271,8 @@ int app_denoising()
 	channels[1] = Mat_<Vec<double, 1> >(mat.dims, mat.size, Vec<double, 1>((double)0));
 	randn(channels[0], mean, stddev);
 	merge(channels, 2, noisy_img);
+	channels[0].release();
+	channels[1].release();
 
 	noisy_img = mat + noisy_img;
 
@@ -271,6 +283,10 @@ int app_denoising()
 	{
 		border[i] = ((noisy_img.size[i] + 32) & (~((1 << nlevels) - 1))) - noisy_img.size[i];
 	}
+
+//	border[0] = 12;
+//	border[1] = 16;
+//	border[2] = 16;
 
 	mat_border_extension<double>(noisy_img, border, "sym", mat_ext);
 
@@ -295,24 +311,17 @@ int app_denoising()
 	}
 
 	ML_MD_FSystem<double> filter_system;
-	typename ML_MC_Coefs_Set<double>::type coefs_set;
-	typename ML_MC_Filter_Norms_Set<double>::type norms_set;
+	ML_MC_Coefs_Set<double>::type coefs_set;
+	ML_MC_Filter_Norms_Set<double>::type norms_set;
 
 	clock_t t0 = tic();
 	decompose_by_ml_md_filter_bank<double>(fs_param, mat_ext, filter_system, norms_set, coefs_set);
 	clock_t t1 = tic();
 	string msg = show_elapse(t1 - t0);
 	cout << msg << endl;
+	mat_ext.release();
 
-//	for (int i = 0; i < (int)coefs_set.size(); ++i)
-//	{
-//		for (int j = 0; j < (int)coefs_set[i].size(); ++j)
-//		{
-//			stringstream ss;
-//			ss <<  "Test-Data/output/coef-" << i << "-" << j << ".jpg";
-//			save_as_media<double>(ss.str(), coefs_set[i][j], &mfmt);
-//		}
-//	}
+
 
 	cout << "Filter Norms: " << endl;
 	for (int i = 0; i < nlevels; ++i)
@@ -324,7 +333,8 @@ int app_denoising()
 		cout << endl;
 	}
 
-	typename ML_MC_Coefs_Set<double>::type new_coefs_set;
+
+	ML_MC_Coefs_Set<double>::type new_coefs_set;
 	normalize_coefs<double>(coefs_set, norms_set, true, coefs_set);
 	thresholding<double>(coefs_set, thr_opt, wwidth, c, stddev, new_coefs_set);
 	normalize_coefs<double>(new_coefs_set, norms_set, false, new_coefs_set);
@@ -340,7 +350,7 @@ int app_denoising()
 //		mat_cut = rec;
 
 
-	save_as_media<double>("Test-Data/output/Lena512-rec.png", mat_cut, &mfmt);
+//	save_as_media<double>("Test-Data/output/Lena512-rec.png", mat_cut, &mfmt);
 
 	double score, msr;
 	psnr<double>(mat, mat_cut, score, msr);

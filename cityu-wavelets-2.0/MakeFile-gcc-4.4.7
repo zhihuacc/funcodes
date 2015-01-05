@@ -1,0 +1,32 @@
+OUTPUT_PATH=./Debug
+OBJS=main.o unit_test.o app/denoising.o src/hammers_and_nails.o src/math_helpers.o src/wavelets_toolbox.o
+
+C_INCLUDE_PATH=/usr/include/x86_64-linux-gnu/
+CPLUS_INCLUDE_PATH=$(C_INCLUDE_PATH)
+LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/
+
+
+CPP_FLAGS=-Wall -O3 -std=c++0x -I/home/harvey/gcc-4.4-env/local/include -I$(CPLUS_INCLUDE_PATH) 
+
+LD_FLAGS=-L/home/harvey/gcc-4.4-env/local/lib -B$(LIBRARY_PATH)
+
+LIBS=-lfftw3 -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_ml -lopencv_video    \
+     -lopencv_features2d -lopencv_calib3d -lopencv_objdetect -lopencv_contrib    \
+     -lopencv_legacy -lopencv_flann
+
+CC=/home/harvey/gcc-4.4-env/local/bin/g++
+LINKER=/home/harvey/gcc-4.4-env/local/bin/g++
+
+ALL:cityu-wavelets-2.0
+	
+cityu-wavelets-2.0:$(OBJS)
+	$(LINKER) -o $@  $(OBJS) $(LIBS) $(LD_FLAGS)
+
+
+%.o:%.cpp
+	$(CC) -o $@ $(CPP_FLAGS) -c $<
+
+#Be careful to modify this rule, since it may remove files which should NOT be removed.
+clean:
+	-rm -r $(OBJS) cityu-wavelets-2.0
+	
