@@ -11,6 +11,7 @@ public:
 	static int mat_select_test(int argc, char **argv);
 	static int denoising(int argc, char **argv);
 	static int psnr_test(int argc, char **argv);
+	static int test_any(int argc, char **argv);
 };
 
 #endif

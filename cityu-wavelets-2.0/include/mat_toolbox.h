@@ -806,6 +806,86 @@ int mat_subfill(Mat_<Vec<_Tp, 2> > &origin_mat, const SmartArray<SmartIntArray> 
 }
 
 template<typename _Tp>
+int mat_subadd(Mat_<Vec<_Tp, 2> > &origin_mat, const SmartArray<SmartIntArray> &index_set_for_each_dim, const Mat_<Vec<_Tp, 2> > &sub_mat)
+{
+	int dims = index_set_for_each_dim.len;
+	SmartIntArray start_pos1(dims);
+	SmartIntArray cur_pos1(dims);
+	SmartIntArray step1(dims, 1);
+	SmartIntArray end_pos1(dims);
+	SmartIntArray sel_idx(dims);
+	SmartArray<SmartIntArray> index_set_for_each_dim_cpy = index_set_for_each_dim.clone();
+	for (int i = 0; i < dims; ++i)
+	{
+		if (index_set_for_each_dim[i].len == 3 && index_set_for_each_dim[i][1] < 0)
+		{
+			const SmartIntArray &this_idx_set = index_set_for_each_dim[i];
+			int start = this_idx_set[0];
+			int step = -this_idx_set[1];
+			int stop = this_idx_set[2];
+			SmartIntArray expanded((stop - start) / step + 1);
+			for (int j = start; j <= stop; j += step)
+			{
+				expanded[j - start] = j;
+			}
+			index_set_for_each_dim_cpy[i] = expanded;
+		}
+		end_pos1[i] = index_set_for_each_dim_cpy[i].len;
+		sel_idx[i] = index_set_for_each_dim_cpy[i][0];
+	}
+
+
+	{
+		int src_dims;
+		SmartIntArray src_start_pos;
+		SmartIntArray src_cur_pos;
+		SmartIntArray src_step;
+		SmartIntArray src_end_pos;
+
+		//User-Defined initialization
+		src_dims = dims;
+		src_start_pos = start_pos1;
+		src_cur_pos = cur_pos1;
+		src_step = step1;
+		src_end_pos = end_pos1;
+		//--
+
+		int cur_dim = src_dims - 1;
+		while(true)
+		{
+			while (cur_dim >= 0 && src_cur_pos[cur_dim] >= src_end_pos[cur_dim])
+			{
+				src_cur_pos[cur_dim] = src_start_pos[cur_dim];
+				--cur_dim;
+				if (cur_dim >= 0)
+				{
+					src_cur_pos[cur_dim] += src_step[cur_dim];
+					continue;
+				}
+			}
+
+			if (cur_dim < 0)
+			{
+				break;
+			}
+
+			//User-Defined actions
+			for (; cur_dim < src_dims; ++cur_dim)
+			{
+				sel_idx[cur_dim] = index_set_for_each_dim_cpy[cur_dim][src_cur_pos[cur_dim]];
+			}
+			origin_mat.template at<complex<_Tp> >(sel_idx) += sub_mat.template at<complex<_Tp> >(src_cur_pos);
+			//--
+
+			cur_dim = src_dims - 1;
+			src_cur_pos[cur_dim] += src_step[cur_dim];
+		}
+	}
+
+	return 0;
+}
+
+template<typename _Tp>
 double lpnorm(const Mat_<Vec<_Tp, 2> > &mat, _Tp p)
 {
 	Mat_<Vec<_Tp, 2> > tmp;
@@ -1757,6 +1837,88 @@ int md_filtering(const Mat_<Vec<_Tp, 2> > &input, const Mat_<Vec<_Tp, 2> > &filt
 	normalized_ifft<_Tp>(fd_input, filtered);
 
 	filtered = filtered * sqrt(filtered.total());
+
+	return 0;
+}
+
+template <typename _Tp>
+int rotate180shift1(const Mat_<Vec<_Tp, 2> > &mat, Mat_<Vec<_Tp, 2> > &rot_mat)
+{
+	int ndims = mat.dims;
+	SmartIntArray start_pos(ndims);
+	SmartIntArray cur_pos(ndims);
+	SmartIntArray step(ndims, 1);
+	SmartIntArray range(ndims, mat.size);
+	SmartIntArray sym_cur_pos(ndims);
+//	for (int i = 0; i < ndims; ++i)
+//	{
+//		sym_cur_pos[i] = range[i] - 1;
+//	}
+	Mat_<Vec<_Tp, 2> > tmp(ndims, range, Vec<_Tp, 2>(0,0));
+	{
+		int src_dims;
+		SmartIntArray src_start_pos;
+		SmartIntArray src_cur_pos;
+		SmartIntArray src_step;
+		SmartIntArray src_end_pos;
+
+		//User-Defined initialization
+		src_dims = ndims;
+		src_start_pos = start_pos;
+		src_cur_pos = cur_pos;
+		src_step = step;
+		src_end_pos = range;
+		//--
+
+		int cur_dim = src_dims - 1;
+		while(true)
+		{
+			while (cur_dim >= 0 && src_cur_pos[cur_dim] >= src_end_pos[cur_dim])
+			{
+				src_cur_pos[cur_dim] = src_start_pos[cur_dim];
+				--cur_dim;
+				if (cur_dim >= 0)
+				{
+					src_cur_pos[cur_dim] += src_step[cur_dim];
+					continue;
+				}
+			}
+			if (cur_dim < 0)
+			{
+				break;
+			}
+
+			//User-Defined actions
+			for (; cur_dim < src_dims; ++cur_dim)
+			{
+				sym_cur_pos[cur_dim] = range[cur_dim] - src_cur_pos[cur_dim];
+				if (sym_cur_pos[cur_dim] >= range[cur_dim])
+				{
+					sym_cur_pos[cur_dim] = 0;
+				}
+			}
+			tmp.template at<Vec<_Tp, 2> >(sym_cur_pos) = mat.template at<Vec<_Tp, 2> >(src_cur_pos);
+			//--
+
+			cur_dim = src_dims - 1;
+			src_cur_pos[cur_dim] += src_step[cur_dim];
+		}
+	}
+
+	rot_mat = tmp;
+	return 0;
+}
+
+template <typename _Tp>
+int conj(Mat_<Vec<_Tp, 2> > &mat)
+{
+	Mat_<Vec<_Tp, 2> > tmp(mat.dims, mat.size);
+	Vec<_Tp, 2> *pa = reinterpret_cast<Vec<_Tp, 2> *>(mat.data);
+	int N = mat.total();
+	for (int i = 0; i < N; ++i, ++pa)
+	{
+		(*pa)[1] = -(*pa)[1];
+	}
 
 	return 0;
 }

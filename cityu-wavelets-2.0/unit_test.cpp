@@ -10,10 +10,28 @@ int Unit_Test::decomposition_test(int argc, char **argv)
 	Mat_<Vec<double, 2> > mat;
 	load_as_tensor<double>("Test-Data/Lena512.png", mat, &mfmt);
 
-	int nlevels = 2;
+	mat = Mat_<Vec<double, 2> >(2, (int[]){16,16});
+	int rnd = 137;
+//	for (int i = 0; i < mat.size[0]; ++i)
+//	{
+//		for (int j = 0; j < mat.size[1]; ++j)
+//		{
+//			mat(i,j) = Vec<double, 2>(rnd / (i + 1) % (j + 1), j * (10-i) % 5);
+//		}
+//	}
+
+	for (int i = 0; i < mat.size[0]; ++i)
+	{
+		for (int j = 0; j < mat.size[1]; ++j)
+		{
+			mat(i,j) = Vec<double, 2>(rnd / (i + 1) % (j + 1), 0);
+		}
+	}
+
+	int nlevels = 1;
 	int nd = mat.dims;
 	ML_MD_FS_Param fs_param(nlevels, nd);
-
+	fs_param.isSym = true;
 	for (int i = 0; i < fs_param.nlevels; ++i)
 	{
 		for (int j = 0; j < fs_param.ndims; ++j)
@@ -35,14 +53,12 @@ int Unit_Test::decomposition_test(int argc, char **argv)
 	}
 
 	ML_MD_FSystem<double> filter_system;
-//	typename ML_MC_Coefs_Set<double>::type coefs_set;
-//	typename ML_MC_Filter_Norms_Set<double>::type norms_set;
 
 	ML_MC_Coefs_Set<double>::type coefs_set;
 	ML_MC_Filter_Norms_Set<double>::type norms_set;
 
 	clock_t t0 = tic();
-	decompose_by_ml_md_filter_bank<double>(fs_param, mat, filter_system, norms_set, coefs_set);
+	decompose_by_ml_md_filter_bank2<double>(fs_param, mat, filter_system, norms_set, coefs_set);
 	clock_t t1 = tic();
 	string msg = show_elapse(t1 - t0);
 	cout << msg << endl;
@@ -52,10 +68,30 @@ int Unit_Test::decomposition_test(int argc, char **argv)
 		for (int j = 0; j < (int)coefs_set[i].size(); ++j)
 		{
 			stringstream ss;
-			ss <<  "Test-Data/output/coef-" << i << "-" << j << ".jpg";
-			save_as_media<double>(ss.str(), coefs_set[i][j], &mfmt);
+			ss <<  "Test-Data/output/coef-" << i << "-" << j << ".txt";
+//			save_as_media<double>(ss.str(), coefs_set[i][j], &mfmt);
+
+			Mat_<Vec<double, 2> > fd;
+			normalized_fft<double>(coefs_set[i][j], fd);
+			center_shift<double>(fd, fd);
+//			cout << "Coef-" << i << "-" << j << endl;
+			print_mat_details_g<double,2>(fd, 2, ss.str());
+			cout << endl;
 		}
 	}
+
+//	cout << "Origin: " << endl;
+//	print_mat_details_g<double, 2>(mat, 2);
+
+	Mat_<Vec<double, 2> > rec;
+	reconstruct_by_ml_md_filter_bank2<double>(fs_param, filter_system, coefs_set, rec);
+	cout << "Rec: " << endl;
+//	print_mat_details_g<double,2>(rec, 2);
+
+	double score, msr;
+
+	psnr(mat, rec, score, msr);
+	cout << "PSNR: score: " << score << ", msr: " << msr << endl;
 
 	return 0;
 }
@@ -73,7 +109,7 @@ int Unit_Test::reconstruction_test(int argc, char **argv)
 	int nlevels = 2;
 	int nd = mat.dims;
 	ML_MD_FS_Param fs_param(nlevels, nd);
-
+	fs_param.isSym = true;
 	for (int i = 0; i < fs_param.nlevels; ++i)
 	{
 		for (int j = 0; j < fs_param.ndims; ++j)
@@ -121,9 +157,9 @@ int Unit_Test::reconstruction_test(int argc, char **argv)
 
 	SmartIntArray mat_size(mat.dims, mat.size);
 	figure_good_mat_size(fs_param, mat_size, border);
-	border[0] = 12;
-	border[1] = 16;
-	border[2] = 16;
+//	border[0] = 12;
+//	border[1] = 16;
+//	border[2] = 16;
 
 	mat_border_extension<RECONSTRUCT_FLOAT_TYPE>(mat, border, "sym", mat_ext);
 //	mat_ext = mat;
@@ -141,16 +177,35 @@ int Unit_Test::reconstruction_test(int argc, char **argv)
 		return 0;
 	}
 	clock_t t0 = tic();
-	decompose_by_ml_md_filter_bank<RECONSTRUCT_FLOAT_TYPE>(fs_param, mat_ext, filter_system, norms_set, coefs_set);
+	decompose_by_ml_md_filter_bank2<RECONSTRUCT_FLOAT_TYPE>(fs_param, mat_ext, filter_system, norms_set, coefs_set);
 	clock_t t1 = tic();
 	string msg = show_elapse(t1 - t0);
 	cout << "Dec Time: " << endl << msg << endl;
 	mat_ext.release();
 
+//	for (int i = 0; i < filter_system.nlevels; ++i)
+//	{
+//		for (int j = 0; j < filter_system.ndims; ++j)
+//		{
+//
+//			const OneD_FSystem<RECONSTRUCT_FLOAT_TYPE> &filters = filter_system.md_fs_at_level[i].oned_fs_at_dim[j];
+//			for (int k = 0; k < filters.filters.len; ++k)
+//			{
+//				cout << "Supp: " << i << " " << j << " " << k << endl;
+//				for (int n = 0; n < filters.filters[k].support_after_ds.len; ++n)
+//				{
+//					cout << filters.filters[k].support_after_ds[n] << " ";
+//				}
+//				cout << endl;
+//			}
+//			cout << endl;
+//		}
+//	}
+
 
 	Mat_<Vec<RECONSTRUCT_FLOAT_TYPE, 2> > rec;
 	t0 = tic();
-	reconstruct_by_ml_md_filter_bank<RECONSTRUCT_FLOAT_TYPE>(fs_param, filter_system, coefs_set, rec);
+	reconstruct_by_ml_md_filter_bank2<RECONSTRUCT_FLOAT_TYPE>(fs_param, filter_system, coefs_set, rec);
 	t1 = tic();
 	msg = show_elapse(t1 - t0);
 	cout << "Rec Time: " << endl << msg << endl;
@@ -159,7 +214,7 @@ int Unit_Test::reconstruction_test(int argc, char **argv)
 //	save_as_media<double>("Test-Data/output/Lena512-ext-rec.png", rec, &mfmt);
 	mat_border_extension<RECONSTRUCT_FLOAT_TYPE>(rec, border, "cut", mat_cut);
 //	mat_cut = rec;
-	save_as_media<RECONSTRUCT_FLOAT_TYPE>("Test-Data/output/mobile2-rec.avi", mat_cut, &mfmt);
+	save_as_media<RECONSTRUCT_FLOAT_TYPE>("Test-Data/output/coastguard144-rec.avi", mat_cut, &mfmt);
 
 	double score, msr;
 	psnr<RECONSTRUCT_FLOAT_TYPE>(mat, mat_cut, score, msr);
@@ -178,19 +233,19 @@ int Unit_Test::construct_1d_filter_test(int argc, char **argv)
 	{
 		for (int j = 0; j < fs_param.ndims; ++j)
 		{
-//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(3, (double[]){-33.0/32.0, 33.0/32.0, M_PI});
-//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(3, (double[]){69.0/128.0, 69.0/128.0, 51.0/512.0});
-//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].degree = 1;
-//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].highpass_ds_folds = SmartIntArray(3, (int[]){2,2,2});
-//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
-//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
-
-			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(6, (double[]){-2, -1.145796, 0, 1.145796, 2, M_PI});
-			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(6, (double[]){0.35, 0.3, 0.125, 0.3, 0.35, 0.0778});
+			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(3, (double[]){-33.0/32.0, 33.0/32.0, M_PI});
+			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(3, (double[]){69.0/128.0, 69.0/128.0, 51.0/512.0});
 			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].degree = 1;
-			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].highpass_ds_folds = SmartIntArray(6, (int[]){4,4,4,4,4,4});
+			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].highpass_ds_folds = SmartIntArray(3, (int[]){2,2,2});
 			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
 			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
+
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(6, (double[]){-2, -1.145796, 0, 1.145796, 2, M_PI});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(6, (double[]){0.35, 0.3, 0.125, 0.3, 0.35, 0.0778});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].degree = 1;
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].highpass_ds_folds = SmartIntArray(6, (int[]){4,4,4,4,4,4});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
 
 //			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(6, (double[]){-2, -1.15, 0, 1.15, 2, M_PI});
 //			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(6, (double[]){0.35, 0.3, 0.125, 0.3, 0.35, 0.0778});
@@ -203,7 +258,7 @@ int Unit_Test::construct_1d_filter_test(int argc, char **argv)
 
 	ML_MD_FSystem<double> fs(nlevels, nd);
 	Mat_<Vec<double, 2> > x_pts;
-	linspace<double>(complex<double>(-M_PI, 0), complex<double>(M_PI, 0), 150, x_pts);
+	linspace<double>(complex<double>(-M_PI, 0), complex<double>(M_PI, 0), 80, x_pts);
 	cout << "X: " << endl;
 	print_mat_details_g<float, 2>(x_pts, 0);
 
@@ -218,16 +273,31 @@ int Unit_Test::construct_1d_filter_test(int argc, char **argv)
 	for (int i = 0; i < (int)oned_fs.filters.len; ++i)
 	{
 		Mat_<Vec<double, 2> > square;
-		pw_abs<double>(oned_fs.filters[i].coefs, square);
+		const Mat_<Vec<double, 2> > coefs = oned_fs.filters[i].coefs;
+		pw_abs<double>(coefs, square);
 		pw_pow<double>(square, 2, square);
 		sum += square;
 		cout << "Filter " << i << endl;
-		print_mat_details_g<double, 2>(oned_fs.filters[i].coefs, 0, "Test-Data/output/log.txt");
+		print_mat_details_g<double, 2>(coefs, 0, "Test-Data/output/log.txt");
+		for (int p = 0; p < (int)coefs.total(); ++p)
+		{
+			if (coefs.at<complex<double> >(0, p).real() > 0)
+			{
+				cout << p << "-" << coefs.at<complex<double> >(0,p).real() << " ";
+			}
+		}
+		cout << endl;
 		const SmartIntArray &supp = oned_fs.filters[i].support_after_ds;
+		const SmartIntArray &sym_supp = oned_fs.filters[i].sym_support_after_ds;
 		cout << "Support: " << supp.len << endl;
 		for (int j = 0; j < supp.len; ++j)
 		{
 			cout << supp[j] << " ";
+		}
+		cout << endl;
+		for (int j = 0; j < supp.len; ++j)
+		{
+			cout << sym_supp[j] << " ";
 		}
 		cout << endl << endl;
 	}
@@ -340,6 +410,9 @@ int Unit_Test::mat_select_test(int argc, char **argv)
 	print_mat_details_g<mat_select_test_FLOAT_TYPE,2>(sub_mat, 2);
 	cout << "Filled: " << endl;
 	print_mat_details_g<mat_select_test_FLOAT_TYPE,2>(zeros, 2);
+	cout << "Added: " << endl;
+	mat_subadd<mat_select_test_FLOAT_TYPE>(zeros, index_at_dim, sub_mat);
+	print_mat_details_g<mat_select_test_FLOAT_TYPE,2>(zeros, 2);
 
 	return 0;
 }
@@ -363,5 +436,33 @@ int Unit_Test::psnr_test(int argc, char **argv)
 	double score = -1, msr = -1;
 	psnr<PSNR_FLOAT_TYPE>(mat1, mat2, score, msr);
 	cout << "PSNR: score: " << score << ", msr: " << msr << endl;
+	return 0;
+}
+
+int Unit_Test::test_any(int argc, char **argv)
+{
+	Mat_<Vec<double, 2> > mat(2, (int[]){10, 10}, Vec<double, 2>(0,0));
+	mat(0,0)[0] = 3;
+	mat(0,1)[0] = 4;
+	mat(1,2)[0] = 5;
+	mat(9,9)[0] = 1;
+	mat(0,8)[0] = 7;
+
+	mat(0,0)[1] = 3;
+	mat(0,1)[1] = 4;
+	mat(1,2)[1] = 5;
+	mat(9,9)[1] = 1;
+	mat(0,8)[1] = 7;
+
+	print_mat_details_g<double, 2>(mat, 2);
+	cout << endl << endl;
+
+	conj(mat);
+	print_mat_details_g<double, 2>(mat, 2);
+	cout << endl << endl;
+
+	rotate180shift1<double>(mat, mat);
+	print_mat_details_g<double, 2>(mat, 2);
+
 	return 0;
 }
