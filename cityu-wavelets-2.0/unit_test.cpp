@@ -100,11 +100,9 @@ int Unit_Test::reconstruction_test(int argc, char **argv)
 {
 #define RECONSTRUCT_FLOAT_TYPE double
 	string filename("Test-Data/coastguard144.avi");
-//	string output_filename("Test-Data/output/gflower.avi");
 	Media_Format mfmt;
 	Mat_<Vec<RECONSTRUCT_FLOAT_TYPE, 2> > mat, mat_ext, mat_cut;
 	load_as_tensor<RECONSTRUCT_FLOAT_TYPE>(filename, mat, &mfmt);
-//	save_as_media<double>("Test-Data/output/Lena512-origin.png", mat, &mfmt);
 
 	int nlevels = 2;
 	int nd = mat.dims;
@@ -157,14 +155,12 @@ int Unit_Test::reconstruction_test(int argc, char **argv)
 
 	SmartIntArray mat_size(mat.dims, mat.size);
 	figure_good_mat_size(fs_param, mat_size, border);
-//	border[0] = 12;
-//	border[1] = 16;
+//	border[0] = 32;
+//	border[1] = 36;
 //	border[2] = 16;
 
 	mat_border_extension<RECONSTRUCT_FLOAT_TYPE>(mat, border, "sym", mat_ext);
 //	mat_ext = mat;
-//	save_as_media<double>("Test-Data/output/Lena512-ext.png", mat_ext, &mfmt);
-
 
 	ML_MD_FSystem<RECONSTRUCT_FLOAT_TYPE> filter_system;
 	ML_MC_Coefs_Set<RECONSTRUCT_FLOAT_TYPE>::type coefs_set;
@@ -192,12 +188,191 @@ int Unit_Test::reconstruction_test(int argc, char **argv)
 //			for (int k = 0; k < filters.filters.len; ++k)
 //			{
 //				cout << "Supp: " << i << " " << j << " " << k << endl;
+//				cout << "    Origin: " << endl;
 //				for (int n = 0; n < filters.filters[k].support_after_ds.len; ++n)
 //				{
 //					cout << filters.filters[k].support_after_ds[n] << " ";
 //				}
 //				cout << endl;
 //			}
+//			cout << endl;
+//		}
+//	}
+//
+	for (int i = 0; i < (int)coefs_set.size(); ++i)
+	{
+		for (int j = 0; j < (int)coefs_set[i].size(); ++j)
+		{
+			stringstream ss;
+			ss <<  "Test-Data/output/coef-" << i << "-" << j << ".txt";
+//			save_as_media<double>(ss.str(), coefs_set[i][j], &mfmt);
+
+			Mat_<Vec<double, 2> > fd;
+			normalized_fft<double>(coefs_set[i][j], fd);
+			center_shift<double>(fd, fd);
+			print_mat_details_g<double,2>(fd, 2, ss.str());
+
+		}
+	}
+
+
+	Mat_<Vec<RECONSTRUCT_FLOAT_TYPE, 2> > rec;
+	t0 = tic();
+	reconstruct_by_ml_md_filter_bank2<RECONSTRUCT_FLOAT_TYPE>(fs_param, filter_system, coefs_set, rec);
+	t1 = tic();
+	msg = show_elapse(t1 - t0);
+	cout << "Rec Time: " << endl << msg << endl;
+
+	mat_border_extension<RECONSTRUCT_FLOAT_TYPE>(rec, border, "cut", mat_cut);
+//	mat_cut = rec;
+	double score, msr;
+	psnr<RECONSTRUCT_FLOAT_TYPE>(mat, mat_cut, score, msr);
+	cout << "PSNR: score: " << score << ", msr: " << msr << endl;
+
+	save_as_media<RECONSTRUCT_FLOAT_TYPE>("Test-Data/output/coastguard144-rec.avi", mat_cut, &mfmt);
+
+
+	return 0;
+}
+
+int Unit_Test::reconstruction_test2(int argc, char **argv)
+{
+#define RECONSTRUCT_FLOAT_TYPE double
+	string filename("Test-Data/Lena512-300.png");
+	Media_Format mfmt;
+	Mat_<Vec<RECONSTRUCT_FLOAT_TYPE, 2> > mat, mat1, mat_ext, mat_ext1, mat_cut, mat_cut1;
+	load_as_tensor<RECONSTRUCT_FLOAT_TYPE>(filename, mat, &mfmt);
+
+	int nlevels = 1;
+	int nd = mat.dims;
+	ML_MD_FS_Param fs_param(nlevels, nd);
+	fs_param.isSym = true;
+	for (int i = 0; i < fs_param.nlevels; ++i)
+	{
+		for (int j = 0; j < fs_param.ndims; ++j)
+		{
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(3, (double[]){-33.0/32.0, 33.0/32.0, M_PI});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(3, (double[]){69.0/128.0, 69.0/128.0, 51.0/512.0});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].degree = 1;
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].highpass_ds_folds = SmartIntArray(3, (int[]){2,2,2});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
+
+			//CTF6d4
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(6, (double[]){-2, -1.145796, 0, 1.145796, 2, M_PI});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(6, (double[]){0.35, 0.3, 0.125, 0.3, 0.35, 0.0778});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].degree = 1;
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].highpass_ds_folds = SmartIntArray(6, (int[]){4,4,4,4,4,4});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
+
+			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(6, (double[]){-2, -1.15, 0, 1.15, 2, M_PI});
+			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(6, (double[]){0.35, 0.3, 0.125, 0.3, 0.35, 0.0778});
+			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].degree = 1;
+			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].highpass_ds_folds = SmartIntArray(6, (int[]){2,2,2,2,2,2});
+			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
+			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
+
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(6, (double[]){-2, -1.15, 0, 1.15, 2, M_PI});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(6, (double[]){0.35, 0.3, 0.125, 0.3, 0.35, 0.0778});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].degree = 1;
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].highpass_ds_folds = SmartIntArray(6, (int[]){4,4,4,4,4,4});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
+
+			//CTF6d2
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(6, (double[]){-(M_PI + 119.0/128.0)/2.0, -119.0/128.0, 0, 119.0/128.0, (M_PI + 119.0/128.0) / 2.0, M_PI});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(6, (double[]){115.0/256.0, 81.0/128.0, 35.0/128.0, 81.0/128.0, 115.0/256.0, 115.0/256.0});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].degree = 1;
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].highpass_ds_folds = SmartIntArray(6, (int[]){2,2,2,2,2,2});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
+		}
+	}
+
+	SmartIntArray border(mat.dims, 32);
+
+	SmartIntArray mat_size(mat.dims, mat.size);
+	figure_good_mat_size(fs_param, mat_size, border);
+//	border[0] = 12;
+//	border[1] = 16;
+//	border[2] = 16;
+
+	mat_border_extension<RECONSTRUCT_FLOAT_TYPE>(mat, border, "sym", mat_ext);
+	mat_border_extension<RECONSTRUCT_FLOAT_TYPE>(mat1, border, "sym", mat_ext1);
+//	mat_ext = mat;
+
+	ML_MD_FSystem<RECONSTRUCT_FLOAT_TYPE> filter_system;
+	ML_MC_Coefs_Set<RECONSTRUCT_FLOAT_TYPE>::type coefs_set;
+	ML_MC_Filter_Norms_Set<RECONSTRUCT_FLOAT_TYPE>::type norms_set;
+
+	int check = check_mat_to_decompose<RECONSTRUCT_FLOAT_TYPE>(fs_param, mat_ext);
+	if (check)
+	{
+		cout << "Mat is NOT in good shape to decompose. ret = " << check << endl;
+		return 0;
+	}
+	clock_t t0 = tic();
+	decompose_by_ml_md_filter_bank2<RECONSTRUCT_FLOAT_TYPE>(fs_param, mat_ext, filter_system, norms_set, coefs_set);
+	clock_t t1 = tic();
+	string msg = show_elapse(t1 - t0);
+	cout << "Dec Time: " << endl << msg << endl;
+
+
+	ML_MD_FS_Param fs_param1 = fs_param;
+	fs_param1.isSym = !fs_param.isSym;
+	ML_MD_FSystem<RECONSTRUCT_FLOAT_TYPE> filter_system1;
+	ML_MC_Coefs_Set<RECONSTRUCT_FLOAT_TYPE>::type coefs_set1;
+	ML_MC_Filter_Norms_Set<RECONSTRUCT_FLOAT_TYPE>::type norms_set1;
+	decompose_by_ml_md_filter_bank2<RECONSTRUCT_FLOAT_TYPE>(fs_param1, mat_ext, filter_system1, norms_set1, coefs_set1);
+
+	mat_ext.release();
+
+	cout << "PSNR level 1 lowpass: " << endl;
+	double score1, msr1;
+	psnr<RECONSTRUCT_FLOAT_TYPE>(coefs_set[0][coefs_set[0].size()  -1], coefs_set1[0][coefs_set1[0].size()  -1], score1, msr1);
+	cout <<"   score: " << score1 << ", msr: " << msr1 << endl;
+	cout << "PSNR level 2 lowpass: " << endl;
+	psnr<RECONSTRUCT_FLOAT_TYPE>(coefs_set[1][coefs_set[1].size()  -1], coefs_set1[1][coefs_set1[1].size()  -1], score1, msr1);
+	cout <<"   score: " << score1 << ", msr: " << msr1 << endl;
+
+	psnr<RECONSTRUCT_FLOAT_TYPE>(coefs_set[1][0], coefs_set1[1][coefs_set1[1].size() - 2], score1, msr1);
+	cout <<"   score: " << score1 << ", msr: " << msr1 << endl;
+
+//
+//	for (int i = 0; i < filter_system.nlevels; ++i)
+//	{
+//		for (int j = 0; j < filter_system.ndims; ++j)
+//		{
+//
+//			const OneD_FSystem<RECONSTRUCT_FLOAT_TYPE> &filters = filter_system.md_fs_at_level[i].oned_fs_at_dim[j];
+//			for (int k = 0; k < filters.filters.len; ++k)
+//			{
+//				cout << "Supp: " << i << " " << j << " " << k << endl;
+//				cout << "    Origin: " << endl;
+//				for (int n = 0; n < filters.filters[k].support_after_ds.len; ++n)
+//				{
+//					cout << filters.filters[k].support_after_ds[n] << " ";
+//				}
+//				cout << endl;
+//			}
+//			cout << endl;
+//		}
+//	}
+
+//	for (int i = 0; i < (int)coefs_set.size(); ++i)
+//	{
+//		for (int j = 0; j < (int)coefs_set[i].size(); ++j)
+//		{
+//			stringstream ss;
+//			ss <<  "Test-Data/output/coef-" << i << "-" << j << ".txt";
+////			save_as_media<double>(ss.str(), coefs_set[i][j], &mfmt);
+//
+//			Mat_<Vec<double, 2> > fd;
+//			normalized_fft<double>(coefs_set[i][j], fd);
+//			center_shift<double>(fd, fd);
+////			cout << "Coef-" << i << "-" << j << endl;
+//			print_mat_details_g<double,2>(fd, 2, ss.str());
 //			cout << endl;
 //		}
 //	}
@@ -210,15 +385,14 @@ int Unit_Test::reconstruction_test(int argc, char **argv)
 	msg = show_elapse(t1 - t0);
 	cout << "Rec Time: " << endl << msg << endl;
 
-
-//	save_as_media<double>("Test-Data/output/Lena512-ext-rec.png", rec, &mfmt);
 	mat_border_extension<RECONSTRUCT_FLOAT_TYPE>(rec, border, "cut", mat_cut);
 //	mat_cut = rec;
-	save_as_media<RECONSTRUCT_FLOAT_TYPE>("Test-Data/output/coastguard144-rec.avi", mat_cut, &mfmt);
-
 	double score, msr;
 	psnr<RECONSTRUCT_FLOAT_TYPE>(mat, mat_cut, score, msr);
 	cout << "PSNR: score: " << score << ", msr: " << msr << endl;
+
+	save_as_media<RECONSTRUCT_FLOAT_TYPE>("Test-Data/output/Lena512-300-rec.png", mat_cut, &mfmt);
+
 
 	return 0;
 }
@@ -233,12 +407,12 @@ int Unit_Test::construct_1d_filter_test(int argc, char **argv)
 	{
 		for (int j = 0; j < fs_param.ndims; ++j)
 		{
-			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(3, (double[]){-33.0/32.0, 33.0/32.0, M_PI});
-			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(3, (double[]){69.0/128.0, 69.0/128.0, 51.0/512.0});
-			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].degree = 1;
-			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].highpass_ds_folds = SmartIntArray(3, (int[]){2,2,2});
-			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
-			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(3, (double[]){-33.0/32.0, 33.0/32.0, M_PI});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(3, (double[]){69.0/128.0, 69.0/128.0, 51.0/512.0});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].degree = 1;
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].highpass_ds_folds = SmartIntArray(3, (int[]){2,2,2});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
 
 //			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(6, (double[]){-2, -1.145796, 0, 1.145796, 2, M_PI});
 //			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(6, (double[]){0.35, 0.3, 0.125, 0.3, 0.35, 0.0778});
@@ -253,12 +427,19 @@ int Unit_Test::construct_1d_filter_test(int argc, char **argv)
 //			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].highpass_ds_folds = SmartIntArray(6, (int[]){4,4,4,4,4,4});
 //			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
 //			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
+
+			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(6, (double[]){-2, -1.15, 0, 1.15, 2, M_PI});
+			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(6, (double[]){0.35, 0.3, 0.125, 0.3, 0.35, 0.0778});
+			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].degree = 1;
+			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].highpass_ds_folds = SmartIntArray(6, (int[]){2,2,2,2,2,2});
+			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
+			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
 		}
 	}
 
 	ML_MD_FSystem<double> fs(nlevels, nd);
 	Mat_<Vec<double, 2> > x_pts;
-	linspace<double>(complex<double>(-M_PI, 0), complex<double>(M_PI, 0), 80, x_pts);
+	linspace<double>(complex<double>(-M_PI, 0), complex<double>(M_PI, 0), 332, x_pts);
 	cout << "X: " << endl;
 	print_mat_details_g<float, 2>(x_pts, 0);
 
@@ -278,7 +459,7 @@ int Unit_Test::construct_1d_filter_test(int argc, char **argv)
 		pw_pow<double>(square, 2, square);
 		sum += square;
 		cout << "Filter " << i << endl;
-		print_mat_details_g<double, 2>(coefs, 0, "Test-Data/output/log.txt");
+//		print_mat_details_g<double, 2>(coefs, 0, "Test-Data/output/log.txt");
 		for (int p = 0; p < (int)coefs.total(); ++p)
 		{
 			if (coefs.at<complex<double> >(0, p).real() > 0)
@@ -295,6 +476,7 @@ int Unit_Test::construct_1d_filter_test(int argc, char **argv)
 			cout << supp[j] << " ";
 		}
 		cout << endl;
+		cout << "   sym: " << endl;
 		for (int j = 0; j < supp.len; ++j)
 		{
 			cout << sym_supp[j] << " ";
@@ -441,6 +623,18 @@ int Unit_Test::psnr_test(int argc, char **argv)
 
 int Unit_Test::test_any(int argc, char **argv)
 {
+
+	Media_Format mfmt2;
+	Mat_<Vec<double, 2> > mat2;
+	load_as_tensor<double>("Test-Data/Lena512.png", mat2, &mfmt2);
+
+	mat2.size[0] = 272;
+	mat2.size[1] = 168;
+
+	save_as_media<double>("Test-Data/output/Lena272-168.png", mat2, &mfmt2);
+
+	return 0;
+
 	Mat_<Vec<double, 2> > mat(2, (int[]){10, 10}, Vec<double, 2>(0,0));
 	mat(0,0)[0] = 3;
 	mat(0,1)[0] = 4;

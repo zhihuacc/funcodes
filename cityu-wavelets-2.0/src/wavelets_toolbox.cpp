@@ -26,7 +26,7 @@ int figure_good_mat_size(const ML_MD_FS_Param &fs_param, const SmartIntArray &ma
 				hcf_lcd(this_dim_lcd, this_dim_param.highpass_ds_folds[k], dummy, this_dim_lcd);
 			}
 
-			hcf_lcd(this_dim_lcd, this_dim_param.lowpass_ds_fold, dummy, this_dim_lcd);
+			hcf_lcd(this_dim_lcd, this_dim_param.lowpass_ds_fold * 2, dummy, this_dim_lcd);
 			good_border[j] *= this_dim_lcd;
 		}
 	}

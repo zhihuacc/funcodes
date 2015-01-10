@@ -1910,6 +1910,70 @@ int rotate180shift1(const Mat_<Vec<_Tp, 2> > &mat, Mat_<Vec<_Tp, 2> > &rot_mat)
 }
 
 template <typename _Tp>
+int rotate180(const Mat_<Vec<_Tp, 2> > &mat, Mat_<Vec<_Tp, 2> > &rot_mat)
+{
+	int ndims = mat.dims;
+	SmartIntArray start_pos(ndims);
+	SmartIntArray cur_pos(ndims);
+	SmartIntArray step(ndims, 1);
+	SmartIntArray range(ndims, mat.size);
+	SmartIntArray sym_cur_pos(ndims);
+	for (int i = 0; i < ndims; ++i)
+	{
+		sym_cur_pos[i] = range[i] - 1;
+	}
+	Mat_<Vec<_Tp, 2> > tmp(ndims, range, Vec<_Tp, 2>(0,0));
+	{
+		int src_dims;
+		SmartIntArray src_start_pos;
+		SmartIntArray src_cur_pos;
+		SmartIntArray src_step;
+		SmartIntArray src_end_pos;
+
+		//User-Defined initialization
+		src_dims = ndims;
+		src_start_pos = start_pos;
+		src_cur_pos = cur_pos;
+		src_step = step;
+		src_end_pos = range;
+		//--
+
+		int cur_dim = src_dims - 1;
+		while(true)
+		{
+			while (cur_dim >= 0 && src_cur_pos[cur_dim] >= src_end_pos[cur_dim])
+			{
+				src_cur_pos[cur_dim] = src_start_pos[cur_dim];
+				--cur_dim;
+				if (cur_dim >= 0)
+				{
+					src_cur_pos[cur_dim] += src_step[cur_dim];
+					continue;
+				}
+			}
+			if (cur_dim < 0)
+			{
+				break;
+			}
+
+			//User-Defined actions
+			for (; cur_dim < src_dims; ++cur_dim)
+			{
+				sym_cur_pos[cur_dim] = range[cur_dim] - 1 - src_cur_pos[cur_dim];
+			}
+			tmp.template at<Vec<_Tp, 2> >(sym_cur_pos) = mat.template at<Vec<_Tp, 2> >(src_cur_pos);
+			//--
+
+			cur_dim = src_dims - 1;
+			src_cur_pos[cur_dim] += src_step[cur_dim];
+		}
+	}
+
+	rot_mat = tmp;
+	return 0;
+}
+
+template <typename _Tp>
 int conj(Mat_<Vec<_Tp, 2> > &mat)
 {
 	Mat_<Vec<_Tp, 2> > tmp(mat.dims, mat.size);

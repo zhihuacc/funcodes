@@ -216,7 +216,7 @@ struct OneD_FSystem
 	SmartArray<OneD_Filter<_Tp> >	filters;
 	int lowpass_ds_fold;
 
-	OneD_FSystem():lowpass_ds_fold(1) {}
+	OneD_FSystem():lowpass_ds_fold(1){}
 	OneD_FSystem(int n):lowpass_ds_fold(1)
 	{
 		filters.reserve(n);
@@ -478,7 +478,6 @@ int construct_1d_filter_system(const Mat_<Vec<_Tp, 2> > &x_pts, const OneD_FS_Pa
 		this_filter.highpass_ds_fold = oned_fs_param.highpass_ds_folds[i];
 
 		SmartArray<SmartIntArray> supp, sym_supp;
-		//TODO need check the conversion.
 		downsample_in_fd_by2<_Tp>(this_filter.coefs, ds_folds, this_filter.folded_coefs, supp, sym_supp);
 
 		//Simplify the support coordinates by removing the first dim.
@@ -493,8 +492,6 @@ int construct_1d_filter_system(const Mat_<Vec<_Tp, 2> > &x_pts, const OneD_FS_Pa
 		this_filter.sym_support_after_ds = reduced_sym_supp;
 	}
 	filter_system.lowpass_ds_fold = oned_fs_param.lowpass_ds_fold;
-
-//	output = filter_system;
 
 	return 0;
 }
@@ -548,7 +545,7 @@ int check_mat_to_decompose(const ML_MD_FS_Param &fs_param, const Mat_<Vec<_Tp, 2
 					return -1;
 				}
 			}
-			if (mat_size[j] % this_dim_param.lowpass_ds_fold != 0)
+			if (mat_size[j] % (this_dim_param.lowpass_ds_fold * 2) != 0)
 			{
 				return -2;
 			}
@@ -876,7 +873,7 @@ int decompose_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const Mat_<V
 		else
 		{
 			last_approx = coefs_set[cur_lvl - 1][coefs_set[cur_lvl - 1].size() - 1];
-			coefs_set[cur_lvl - 1].pop_back();
+//			coefs_set[cur_lvl - 1].pop_back();
 		}
 
 		// This is the size of full filters at this level.
@@ -965,12 +962,13 @@ int decompose_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const Mat_<V
 				// Plan A --
 				Mat_<Vec<_Tp, 2> > md_filter_center_part;
 				tensor_product<_Tp>(lowpass_filter_center_part_at_dim, md_filter_center_part);
-				pw_pow<_Tp>(md_filter_center_part, (_Tp)2, md_filter_center_part);
+				pw_pow<_Tp>(md_filter_center_part, static_cast<_Tp>(2), md_filter_center_part);
 				// -- Plan A
 
 				// -- Speed up Plan B
 				if (fs_param.isSym && cur_pos == sym_cur_pos)
 				{
+					// If it is odd center, then there must be only one lowpass filter.
 					is_odd_center = true;
 				}
 				// -- Plan B
@@ -983,14 +981,6 @@ int decompose_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const Mat_<V
 				{
 					lowpass_filter += md_filter_center_part;
 				}
-
-				//-- Speed up Plan A
-//				if (fs_param.isSym && cur_pos != sym_cur_pos)
-//				{
-//					rotate180shift1<_Tp>(md_filter_center_part, md_filter_center_part);
-//					lowpass_filter += md_filter_center_part;
-//				}
-				//--
 			}
 			else
 			{
@@ -999,6 +989,12 @@ int decompose_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const Mat_<V
 				Mat_<Vec<_Tp, 2> > last_approx_subarea;
 				tensor_product<_Tp>(chosen_ds_filter_at_dim, folded_md_filter);
 				mat_select<_Tp>(last_approx, supp_after_ds_at_dim, last_approx_subarea);
+
+				{
+					stringstream ss;
+					ss << "Test-Data/output/filter-" << cur_lvl <<"-" << n << ".txt";
+					print_mat_details_g<_Tp,2>(folded_md_filter, 2, ss.str());
+				}
 
 				pw_mul<_Tp>(last_approx_subarea, folded_md_filter, last_approx_subarea);
 				icenter_shift<_Tp>(last_approx_subarea, last_approx_subarea);
@@ -1025,15 +1021,6 @@ int decompose_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const Mat_<V
 			//-- User Action
 		}
 
-		// -- Speed up Plan B
-//		if (fs_param.isSym)
-//		{
-//			Mat_<Vec<_Tp, 2> > another_half_lowpass;
-//			rotate180shift1<_Tp>(lowpass_filter, another_half_lowpass);
-//			lowpass_filter += another_half_lowpass;
-//		}
-		// -- Plan B
-
 		if (fs_param.isSym && !is_odd_center)
 		{
 			Mat_<Vec<_Tp, 2> > another_half_lowpass;
@@ -1042,13 +1029,13 @@ int decompose_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const Mat_<V
 		}
 
 		pw_sqrt<_Tp>(lowpass_filter, lowpass_filter);
+
 		if (true)
 		{
 			// Plan A --
 			mat_select<_Tp>(last_approx, lowpass_center_range_at_dim, last_approx);
 			pw_mul<_Tp>(last_approx, lowpass_filter, last_approx);
 			// -- Plan A
-
 
 			if (cur_lvl == nlevels - 1)
 			{
@@ -1367,7 +1354,6 @@ int reconstruct_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const ML_M
 				tensor_product<_Tp>(lowpass_filter_center_part_at_dim, md_filter_center_part);
 				pw_pow<_Tp>(md_filter_center_part, static_cast<_Tp>(2), md_filter_center_part);
 
-
 				// -- Speed up Plan B
 				if (fs_param.isSym && cur_pos == sym_cur_pos)
 				{
@@ -1383,14 +1369,6 @@ int reconstruct_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const ML_M
 				{
 					lowpass_filter += md_filter_center_part;
 				}
-
-				//-- Speed up Plan A
-//				if (fs_param.isSym && cur_pos != sym_cur_pos)
-//				{
-//					rotate180shift1<_Tp>(md_filter_center_part, md_filter_center_part);
-//					lowpass_filter += md_filter_center_part;
-//				}
-				//--
 			}
 			else
 			{
@@ -1402,10 +1380,6 @@ int reconstruct_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const ML_M
 				tensor_product<_Tp>(chosen_ds_filter_at_dim, ds_filter);
 				pw_mul<_Tp>(this_channel_coef, ds_filter, this_channel_coef);
 				mat_subadd(this_level_highpass_sum, supp_after_ds_at_dim, this_channel_coef);
-
-				// -- Speed up Plan B
-
-				// -- Plan B
 
 				++highpass_coef_index;
 			}
