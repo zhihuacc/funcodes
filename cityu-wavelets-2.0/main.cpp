@@ -13,11 +13,11 @@ int main(int argc, char **argv)
 
 //	unit_test.decomposition_test(argc, argv);
 
-	unit_test.reconstruction_test(argc, argv);
+//	unit_test.reconstruction_test(argc, argv);
 
 //	unit_test.construct_1d_filter_test(argc, argv);
 
 //	unit_test.fft_center_shift_test(argc, argv);
 
-//	unit_test.test_any(argc, argv);
+	unit_test.test_any(argc, argv);
 }

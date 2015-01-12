@@ -1,5 +1,5 @@
 OUTPUT_PATH=./Debug
-OBJS=main.o unit_test.o app/denoising.o src/hammers_and_nails.o src/math_helpers.o src/wavelets_toolbox.o
+OBJS=main.o unit_test.o src/hammers_and_nails.o src/math_helpers.o src/wavelets_toolbox.o
 
 INC_PATH=/usr/local/include
 LIB_PATH=/usr/local/lib

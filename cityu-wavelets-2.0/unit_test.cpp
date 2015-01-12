@@ -1,7 +1,7 @@
 #include "unit_test.h"
 
 #include "include/wavelets_toolbox.h"
-#include "include/app.h"
+#include "include/denoising.h"
 
 int Unit_Test::decomposition_test(int argc, char **argv)
 {
@@ -154,7 +154,7 @@ int Unit_Test::reconstruction_test(int argc, char **argv)
 	SmartIntArray border(mat.dims, 32);
 
 	SmartIntArray mat_size(mat.dims, mat.size);
-	figure_good_mat_size(fs_param, mat_size, border);
+	figure_good_mat_size(fs_param, mat_size, border, border);
 //	border[0] = 32;
 //	border[1] = 36;
 //	border[2] = 16;
@@ -293,7 +293,7 @@ int Unit_Test::reconstruction_test2(int argc, char **argv)
 	SmartIntArray border(mat.dims, 32);
 
 	SmartIntArray mat_size(mat.dims, mat.size);
-	figure_good_mat_size(fs_param, mat_size, border);
+	figure_good_mat_size(fs_param, mat_size, border, border);
 //	border[0] = 12;
 //	border[1] = 16;
 //	border[2] = 16;
@@ -601,7 +601,56 @@ int Unit_Test::mat_select_test(int argc, char **argv)
 
 int Unit_Test::denoising(int argc, char **argv)
 {
-	app_denoising();
+#define DENOISING_FLOAT_TYPE double
+
+	string img_names("Test-Data/coastguard144.avi");
+
+	Media_Format mfmt;
+	Mat_<Vec<DENOISING_FLOAT_TYPE, 2> > input, noisy_input, denoised_output;
+	load_as_tensor<DENOISING_FLOAT_TYPE>(img_names, input, &mfmt);
+	int ndims = input.dims;
+
+	//-- Fake up noisy data.
+	double mean = 0;
+	double stdev = 15;
+	Mat_<Vec<DENOISING_FLOAT_TYPE, 1> > channels[2];
+	channels[0] = Mat_<Vec<DENOISING_FLOAT_TYPE, 1> >(input.dims, input.size);
+	channels[1] = Mat_<Vec<DENOISING_FLOAT_TYPE, 1> >(input.dims, input.size, Vec<DENOISING_FLOAT_TYPE, 1>((DENOISING_FLOAT_TYPE)0));
+	randn(channels[0], mean, stdev);
+	merge(channels, 2, noisy_input);
+	channels[0].release();
+	channels[1].release();
+	noisy_input = input + noisy_input;
+	// --
+
+	double score, msr;
+	psnr<DENOISING_FLOAT_TYPE>(input, noisy_input, score, msr);
+	cout << "Noisy Input PSNR score: " << score << ", msr: " << msr << endl << endl;
+
+	// -- Prepare parameters;
+	int nlevels = 2;
+	string fs_param_opt = "CTF3";
+	int ext_size = 12;
+	string ext_opt = "sym";
+	ML_MD_FS_Param ml_md_fs_param;
+	compose_fs_param(nlevels, ndims, fs_param_opt, ext_size, ext_opt, ml_md_fs_param);
+	ml_md_fs_param.isSym = true;
+
+	Thresholding_Param thr_param;
+	thr_param.c = 1;
+	thr_param.mean = mean;
+	thr_param.stdev = stdev;
+	thr_param.doNormalization = true;
+	thr_param.wwidth = 7;
+	thr_param.thr_method = "localsoft";
+	// --
+
+	thresholding_denoise<DENOISING_FLOAT_TYPE>(noisy_input, ml_md_fs_param, thr_param, denoised_output);
+	noisy_input.release();
+
+
+	psnr<DENOISING_FLOAT_TYPE>(input, denoised_output, score, msr);
+	cout << "Denoised PSNR score: " << score << ", msr: " << msr << endl;
 
 	return 0;
 }
@@ -624,16 +673,16 @@ int Unit_Test::psnr_test(int argc, char **argv)
 int Unit_Test::test_any(int argc, char **argv)
 {
 
-	Media_Format mfmt2;
-	Mat_<Vec<double, 2> > mat2;
-	load_as_tensor<double>("Test-Data/Lena512.png", mat2, &mfmt2);
-
-	mat2.size[0] = 272;
-	mat2.size[1] = 168;
-
-	save_as_media<double>("Test-Data/output/Lena272-168.png", mat2, &mfmt2);
-
-	return 0;
+//	Media_Format mfmt2;
+//	Mat_<Vec<double, 2> > mat2;
+//	load_as_tensor<double>("Test-Data/Lena512.png", mat2, &mfmt2);
+//
+//	mat2.size[0] = 272;
+//	mat2.size[1] = 168;
+//
+//	save_as_media<double>("Test-Data/output/Lena272-168.png", mat2, &mfmt2);
+//
+//	return 0;
 
 	Mat_<Vec<double, 2> > mat(2, (int[]){10, 10}, Vec<double, 2>(0,0));
 	mat(0,0)[0] = 3;
@@ -648,15 +697,23 @@ int Unit_Test::test_any(int argc, char **argv)
 	mat(9,9)[1] = 1;
 	mat(0,8)[1] = 7;
 
+	mat(2,2)[0] = 3;
+	mat(2,3)[0] = 3;
+	mat(2,4)[0] = 3;
+	mat(3,2)[0] = 3;
+	mat(3,3)[0] = 3;
+	mat(3,4)[0] = 3;
+	mat(4,2)[0] = 3;
+	mat(4,3)[0] = 3;
+	mat(4,4)[0] = 3;
+
 	print_mat_details_g<double, 2>(mat, 2);
 	cout << endl << endl;
 
-	conj(mat);
-	print_mat_details_g<double, 2>(mat, 2);
-	cout << endl << endl;
-
-	rotate180shift1<double>(mat, mat);
-	print_mat_details_g<double, 2>(mat, 2);
+    Mat_<Vec<double, 2> > filter(2, (int[]){3,3}, Vec<double, 2>(1.0/9.0,0));
+    SmartIntArray achor(2, 1);
+    md_filtering<double>(mat, filter, achor, mat);
+    print_mat_details_g<double, 2>(mat, 2);
 
 	return 0;
 }

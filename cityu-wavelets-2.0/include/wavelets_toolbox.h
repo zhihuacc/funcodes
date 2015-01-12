@@ -26,49 +26,9 @@ int linspace(const complex<_Tp> &left, const complex<_Tp> &right, int n, Mat_<Ve
 }
 
 
-static double sincos_bump(double x, int m)
-{
-	double f;
-	if (x <= 0 || x >= 1)
-	{
-		f = 0;
-	}
-	else
-	{
-		f = 0;
-		for (int j = 0; j < m; ++j)
-		{
-			f += nchoosek(m - 1 + j, j) * pow(x, j);
-		}
+double sincos_bump(double x, int m);
 
-		f *= pow(1 - x, m);
-		f = sin(0.5 * M_PI * f);
-	}
-
-	return f;
-}
-
-static double sqrt_bump(double x, int m)
-{
-	double f;
-	if (x <= 0 || x >= 1)
-	{
-		f = 0;
-	}
-	else
-	{
-		f = 0;
-		for (int k = 0; k < m; ++k)
-		{
-			f += (k&1 ? -1 : 1) * nchoosek(2 * m - 1, m - 1 - k) * nchoosek(m - 1 + k, k) * pow(x, k);
-		}
-
-		f *= pow(x, m);
-		f = sqrt(f);
-	}
-
-	return f;
-}
+double sqrt_bump(double x, int m);
 
 struct Chi_Ctrl_Param
 {
@@ -185,11 +145,14 @@ struct MD_FS_Param
 struct ML_MD_FS_Param
 {
 	SmartArray<MD_FS_Param> md_fs_param_at_level;
-	int nlevels;
-	int ndims;
-	bool isSym;
+	int 					nlevels;
+	int 					ndims;
+	SmartIntArray			ext_border;
+	string					ext_method;
+	bool 					isSym;
+	ML_MD_FS_Param():nlevels(0), ndims(0), isSym(false){}
 
-	ML_MD_FS_Param(int lvl, int d): nlevels(lvl), ndims(d), isSym(false)
+	ML_MD_FS_Param(int lvl, int d): nlevels(lvl), ndims(d), ext_border(ndims), isSym(false)
 	{
 		md_fs_param_at_level.reserve(nlevels);
 		for (int i = 0; i < nlevels; ++i)
@@ -246,6 +209,8 @@ struct ML_MD_FSystem
 		}
 	}
 };
+
+
 
 /*
  * This function reduces 'filter' for each dim by folds[cur_dim].
@@ -525,7 +490,9 @@ struct MC_Filter_Norms_Set
 	typedef vector<_Tp> type;
 };
 
-int figure_good_mat_size(const ML_MD_FS_Param &fs_param, const SmartIntArray &mat_size, SmartIntArray &border);
+int figure_good_mat_size(const ML_MD_FS_Param &fs_param, const SmartIntArray &mat_size, const SmartIntArray &border, SmartIntArray &better);
+
+int compose_fs_param(int nlevels, int ndims, const string &fs_param_opt, int ext_size, const string &ext_opt, ML_MD_FS_Param &ml_md_fs_param);
 
 template<typename _Tp>
 int check_mat_to_decompose(const ML_MD_FS_Param &fs_param, const Mat_<Vec<_Tp, 2> > &mat)
@@ -873,7 +840,7 @@ int decompose_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const Mat_<V
 		else
 		{
 			last_approx = coefs_set[cur_lvl - 1][coefs_set[cur_lvl - 1].size() - 1];
-//			coefs_set[cur_lvl - 1].pop_back();
+			coefs_set[cur_lvl - 1].pop_back();
 		}
 
 		// This is the size of full filters at this level.
@@ -950,7 +917,6 @@ int decompose_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const Mat_<V
 				chosen_ds_filter_at_dim[i] = this_filter.folded_coefs;
 				chosen_full_filter_at_dim[i] = this_filter.coefs;
 				supp_after_ds_at_dim[i]= this_filter.support_after_ds;
-				//TODO here is conversion from Mat to Mat_
 				lowpass_filter_center_part_at_dim[i] = this_filter.coefs.colRange(lowpass_center_range_at_dim[i][0],
 																				  lowpass_center_range_at_dim[i][2] + 1);
 				is_lowpass = is_lowpass && this_filter.isLowPass;
@@ -989,12 +955,6 @@ int decompose_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const Mat_<V
 				Mat_<Vec<_Tp, 2> > last_approx_subarea;
 				tensor_product<_Tp>(chosen_ds_filter_at_dim, folded_md_filter);
 				mat_select<_Tp>(last_approx, supp_after_ds_at_dim, last_approx_subarea);
-
-				{
-					stringstream ss;
-					ss << "Test-Data/output/filter-" << cur_lvl <<"-" << n << ".txt";
-					print_mat_details_g<_Tp,2>(folded_md_filter, 2, ss.str());
-				}
 
 				pw_mul<_Tp>(last_approx_subarea, folded_md_filter, last_approx_subarea);
 				icenter_shift<_Tp>(last_approx_subarea, last_approx_subarea);
