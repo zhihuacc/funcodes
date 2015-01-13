@@ -16,12 +16,6 @@ struct Thresholding_Param
 	string thr_method;
 };
 
-int thresholding_denoise(const Mat &noisy_input, const ML_MD_FS_Param &fs_param, const Thresholding_Param &thr_param, Mat &output);
-
-int app_denoising();
-int app_3d_denoising();
-
-
 
 template <typename _Tp>
 int normalize_coefs(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, const typename ML_MC_Filter_Norms_Set<_Tp>::type &norms_set, bool forward, typename ML_MC_Coefs_Set<_Tp>::type &ncoefs_set)
@@ -67,7 +61,7 @@ int bishrink(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, d
 	new_coefs_set.reserve(coefs_set.size());
 	new_coefs_set.resize(coefs_set.size());
 	SmartIntArray anchor(nd, wwidth / 2);
-	for (int cur_lvl = 0; cur_lvl < (int)nlevels - 1; ++cur_lvl)
+	for (int cur_lvl = 0; cur_lvl < nlevels - 1; ++cur_lvl)
 	{
 		const typename MC_Coefs_Set<_Tp>::type &this_level_set = coefs_set[cur_lvl];
 		const typename MC_Coefs_Set<_Tp>::type &lower_level_set = coefs_set[cur_lvl + 1];
@@ -81,10 +75,9 @@ int bishrink(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, d
 			Mat_<Vec<_Tp, 2> > T;
 			Mat_<Vec<_Tp, 2> > T_abs;
 			Mat_<Vec<_Tp, 2> > R;
-			Mat_<Vec<_Tp, 2> > good_to_div;
 			complex<_Tp> infinitesimal(1e-16,0);
 			pw_abs<_Tp>(Y, Y_abs);
-			pw_pow<_Tp>(Y_abs, 2, T);
+			pw_pow<_Tp>(Y_abs, static_cast<_Tp>(2), T);
 			md_filtering<_Tp>(T, avg_window, anchor, T);
 
 			T -= Scalar(sigma * sigma, 0);
@@ -100,14 +93,16 @@ int bishrink(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, d
 			}
 			interpolate<_Tp>(Y_par, times, Y_par);
 			Mat_<Vec<_Tp, 2> > tmp0, tmp1;
-			pw_pow<_Tp>(Y_abs, 2, tmp0);
+			pw_pow<_Tp>(Y_abs, static_cast<_Tp>(2), tmp0);
 			pw_abs<_Tp>(Y_par, tmp1);
-			pw_pow<_Tp>(tmp1, 2, tmp1);
+			pw_pow<_Tp>(tmp1, static_cast<_Tp>(2), tmp1);
 			pw_sqrt<_Tp>(tmp0 + tmp1, R);
 			R -= T;
+			tmp0.release();
+			tmp1.release();
 
 			Mat_<Vec<_Tp, 2> > mask, ratio;
-			pw_max<_Tp>(R, complex<_Tp>(0,0), R);
+			pw_max<_Tp>(R, complex<_Tp>(0,0), R);  // This equals R * (R > 0)
 			// R is ready
 
 			Mat_<Vec<_Tp, 2> > r_t = R + T;

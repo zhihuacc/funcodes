@@ -612,7 +612,7 @@ int Unit_Test::denoising(int argc, char **argv)
 
 	//-- Fake up noisy data.
 	double mean = 0;
-	double stdev = 15;
+	double stdev = 25;
 	Mat_<Vec<DENOISING_FLOAT_TYPE, 1> > channels[2];
 	channels[0] = Mat_<Vec<DENOISING_FLOAT_TYPE, 1> >(input.dims, input.size);
 	channels[1] = Mat_<Vec<DENOISING_FLOAT_TYPE, 1> >(input.dims, input.size, Vec<DENOISING_FLOAT_TYPE, 1>((DENOISING_FLOAT_TYPE)0));
@@ -714,6 +714,10 @@ int Unit_Test::test_any(int argc, char **argv)
     SmartIntArray achor(2, 1);
     md_filtering<double>(mat, filter, achor, mat);
     print_mat_details_g<double, 2>(mat, 2);
+
+    pw_abs<double>(mat, mat);
+    cout << endl << "Abs: " << endl;
+    print_mat_details_g<double,2>(mat, 2);
 
 	return 0;
 }

@@ -121,7 +121,12 @@ int compose_fs_param(int nlevels, int ndims, const string &fs_param_opt, int ext
 			}
 			else if (fs_param_opt == "CTF6D2")
 			{
-
+				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(6, (double[]){-(M_PI + 119.0/128.0)/2.0, -119.0/128.0, 0, 119.0/128.0, (M_PI + 119.0/128.0) / 2.0, M_PI});
+				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(6, (double[]){115.0/256.0, 81.0/128.0, 35.0/128.0, 81.0/128.0, 115.0/256.0, 115.0/256.0});
+				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].degree = 1;
+				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].highpass_ds_folds = SmartIntArray(6, (int[]){2,2,2,2,2,2});
+				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
+				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
 			}
 		}
 	}
