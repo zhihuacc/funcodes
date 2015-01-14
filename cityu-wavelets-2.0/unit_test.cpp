@@ -613,7 +613,7 @@ int Unit_Test::denoising(int argc, char **argv)
 
 	//-- Fake up noisy data.
 	double mean = 0;
-	double stdev = 15;
+	double stdev = 20;
 	Mat_<Vec<DENOISING_FLOAT_TYPE, 1> > channels[2];
 	channels[0] = Mat_<Vec<DENOISING_FLOAT_TYPE, 1> >(input.dims, input.size);
 	channels[1] = Mat_<Vec<DENOISING_FLOAT_TYPE, 1> >(input.dims, input.size, Vec<DENOISING_FLOAT_TYPE, 1>((DENOISING_FLOAT_TYPE)0));
