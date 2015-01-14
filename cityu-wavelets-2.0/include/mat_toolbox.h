@@ -1456,7 +1456,7 @@ int mat_border_extension(const Mat_<Vec<_Tp, 2> > &origin, const SmartIntArray &
 	//TODO: Check if border[i] is less than origin.size[i]
 
 	int bd_mode = -1;
-	if (opt == "sym")
+	if (opt == "rep")
 	{
 		bd_mode = 0;
 	}
@@ -1550,7 +1550,7 @@ int mat_border_extension(const Mat_<Vec<_Tp, 2> > &origin, const SmartIntArray &
 			{
 				dst_pos[cur_dim] = src_cur_pos[cur_dim] - shift[cur_dim];
 
-				if (bd_mode == 0)  //sym
+				if (bd_mode == 0)  //rep
 				{
 					if (dst_pos[cur_dim] < 0)
 					{
@@ -1590,7 +1590,6 @@ int mat_border_extension(const Mat_<Vec<_Tp, 2> > &origin, const SmartIntArray &
 					if (dst_pos[cur_dim] < 0 || dst_pos[cur_dim] >= origin_size[cur_dim])
 					{
 						invld = true;
-						break;
 					}
 				}
 

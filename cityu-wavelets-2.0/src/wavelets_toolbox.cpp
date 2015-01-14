@@ -94,7 +94,7 @@ double sqrt_bump(double x, int m)
 	return f;
 }
 
-int compose_fs_param(int nlevels, int ndims, const string &fs_param_opt, int ext_size, const string &ext_opt, ML_MD_FS_Param &ml_md_fs_param)
+int compose_fs_param(int nlevels, int ndims, const string &fs_param_opt, int ext_size, const string &ext_opt, bool isSym, ML_MD_FS_Param &ml_md_fs_param)
 {
 	ML_MD_FS_Param fs_param(nlevels, ndims);
 	for (int i = 0; i < fs_param.nlevels; ++i)
@@ -128,11 +128,30 @@ int compose_fs_param(int nlevels, int ndims, const string &fs_param_opt, int ext
 				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
 				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
 			}
+			else
+			{
+				cout << "Bad fs_param_opt: " << fs_param_opt << endl;
+				return -1;
+			}
 		}
 	}
+	if (ext_size < 0)
+	{
+		return -2;
+	}
 	fs_param.ext_border = SmartIntArray(ndims, ext_size);
+
+	if (ext_opt != "rep" && ext_opt != "mir101" && ext_opt != "mir1001" && ext_opt != "blk")
+	{
+		return -3;
+	}
+
 	fs_param.ext_method = ext_opt;
+
+	fs_param.isSym = isSym;
 
 	ml_md_fs_param = fs_param;
 	return 0;
 }
+
+

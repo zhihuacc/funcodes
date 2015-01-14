@@ -16,6 +16,7 @@ struct Thresholding_Param
 	string thr_method;
 };
 
+int compose_thr_param(double mean, double stdev, double c, int wwidth, bool doNorm, const string &thr_opt, Thresholding_Param &thr_param);
 
 template <typename _Tp>
 int normalize_coefs(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, const typename ML_MC_Filter_Norms_Set<_Tp>::type &norms_set, bool forward, typename ML_MC_Coefs_Set<_Tp>::type &ncoefs_set)
@@ -55,7 +56,7 @@ int bishrink(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, d
 	int nd = coefs_set[0][0].dims;
 	int nlevels = coefs_set.size();
 	SmartIntArray winsize(nd, wwidth);
-	Mat avg_window(nd, winsize, CV_64FC2, Scalar(1.0 / pow(wwidth, nd),0));
+	Mat_<Vec<_Tp, 2> > avg_window(nd, winsize, Vec<_Tp, 2>(1.0 / pow(wwidth, nd),0));
 
 	typename ML_MC_Coefs_Set<_Tp>::type new_coefs_set;
 	new_coefs_set.reserve(coefs_set.size());
@@ -78,7 +79,11 @@ int bishrink(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, d
 			complex<_Tp> infinitesimal(1e-16,0);
 			pw_abs<_Tp>(Y, Y_abs);
 			pw_pow<_Tp>(Y_abs, static_cast<_Tp>(2), T);
+
+			SmartIntArray border(nd, wwidth - 1);
+			mat_border_extension(T, border, "blk", T);
 			md_filtering<_Tp>(T, avg_window, anchor, T);
+			mat_border_extension(T, border, "cut", T);
 
 			T -= Scalar(sigma * sigma, 0);
 			pw_max<_Tp>(T, infinitesimal, T);
@@ -144,7 +149,11 @@ int local_soft(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth,
 
 			pw_abs<_Tp>(Y, Y_abs);
 			pw_pow<_Tp>(Y_abs, static_cast<_Tp>(2), T);
+
+			SmartIntArray border(nd, wwidth - 1);
+			mat_border_extension(T, border, "blk", T);
 			md_filtering<_Tp>(T, avg_window, anchor, T);
+			mat_border_extension(T, border, "cut", T);
 
 			T -= Scalar(sigma * sigma, 0);
 			pw_max<_Tp>(T, infinitesimal, T);
@@ -202,7 +211,12 @@ int local_adapt(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth
 			Mat_<Vec<_Tp, 2> > T_abs;
 			complex<_Tp> infinitesimal(1e-16, 0);
 			pw_abs<_Tp>(Y, Y_abs);
-			md_filtering<_Tp>(Y_abs, avg_window, anchor, T);
+
+			SmartIntArray border(nd, wwidth - 1);
+			mat_border_extension(Y_abs, border, "blk", T);
+			md_filtering<_Tp>(T, avg_window, anchor, T);
+			mat_border_extension(T, border, "cut", T);
+
 			pw_pow<_Tp>(T, static_cast<_Tp>(2), T);
 
 			T -= Scalar(sigma * sigma, 0);

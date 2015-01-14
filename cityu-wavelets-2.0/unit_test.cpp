@@ -112,20 +112,20 @@ int Unit_Test::reconstruction_test(int argc, char **argv)
 	{
 		for (int j = 0; j < fs_param.ndims; ++j)
 		{
-//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(3, (double[]){-33.0/32.0, 33.0/32.0, M_PI});
-//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(3, (double[]){69.0/128.0, 69.0/128.0, 51.0/512.0});
-//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].degree = 1;
-//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].highpass_ds_folds = SmartIntArray(3, (int[]){2,2,2});
-//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
-//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
-
-			//CTF6d4
-			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(6, (double[]){-2, -1.145796, 0, 1.145796, 2, M_PI});
-			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(6, (double[]){0.35, 0.3, 0.125, 0.3, 0.35, 0.0778});
+			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(3, (double[]){-33.0/32.0, 33.0/32.0, M_PI});
+			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(3, (double[]){69.0/128.0, 69.0/128.0, 51.0/512.0});
 			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].degree = 1;
-			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].highpass_ds_folds = SmartIntArray(6, (int[]){4,4,4,4,4,4});
+			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].highpass_ds_folds = SmartIntArray(3, (int[]){2,2,2});
 			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
 			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
+
+			//CTF6d4
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(6, (double[]){-2, -1.145796, 0, 1.145796, 2, M_PI});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(6, (double[]){0.35, 0.3, 0.125, 0.3, 0.35, 0.0778});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].degree = 1;
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].highpass_ds_folds = SmartIntArray(6, (int[]){4,4,4,4,4,4});
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
+//			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
 
 //			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(6, (double[]){-2, -1.15, 0, 1.15, 2, M_PI});
 //			fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(6, (double[]){0.35, 0.3, 0.125, 0.3, 0.35, 0.0778});
@@ -151,7 +151,7 @@ int Unit_Test::reconstruction_test(int argc, char **argv)
 		}
 	}
 
-	SmartIntArray border(mat.dims, 32);
+	SmartIntArray border(mat.dims, 12);
 
 	SmartIntArray mat_size(mat.dims, mat.size);
 	figure_good_mat_size(fs_param, mat_size, border, border);
@@ -159,7 +159,7 @@ int Unit_Test::reconstruction_test(int argc, char **argv)
 //	border[1] = 36;
 //	border[2] = 16;
 
-	mat_border_extension<RECONSTRUCT_FLOAT_TYPE>(mat, border, "sym", mat_ext);
+	mat_border_extension<RECONSTRUCT_FLOAT_TYPE>(mat, border, "mir1001", mat_ext);
 //	mat_ext = mat;
 
 	ML_MD_FSystem<RECONSTRUCT_FLOAT_TYPE> filter_system;
@@ -207,10 +207,10 @@ int Unit_Test::reconstruction_test(int argc, char **argv)
 			ss <<  "Test-Data/output/coef-" << i << "-" << j << ".txt";
 //			save_as_media<double>(ss.str(), coefs_set[i][j], &mfmt);
 
-			Mat_<Vec<double, 2> > fd;
-			normalized_fft<double>(coefs_set[i][j], fd);
-			center_shift<double>(fd, fd);
-			print_mat_details_g<double,2>(fd, 2, ss.str());
+//			Mat_<Vec<double, 2> > fd;
+//			normalized_fft<double>(coefs_set[i][j], fd);
+//			center_shift<double>(fd, fd);
+			print_mat_details_g<double,2>(coefs_set[i][j], 2, ss.str());
 
 		}
 	}
@@ -290,7 +290,7 @@ int Unit_Test::reconstruction_test2(int argc, char **argv)
 		}
 	}
 
-	SmartIntArray border(mat.dims, 32);
+	SmartIntArray border(mat.dims, 12);
 
 	SmartIntArray mat_size(mat.dims, mat.size);
 	figure_good_mat_size(fs_param, mat_size, border, border);
@@ -605,6 +605,7 @@ int Unit_Test::denoising(int argc, char **argv)
 
 	string img_names("Test-Data/coastguard144.avi");
 
+	int ret = 0;
 	Media_Format mfmt;
 	Mat_<Vec<DENOISING_FLOAT_TYPE, 2> > input, noisy_input, denoised_output;
 	load_as_tensor<DENOISING_FLOAT_TYPE>(img_names, input, &mfmt);
@@ -612,7 +613,7 @@ int Unit_Test::denoising(int argc, char **argv)
 
 	//-- Fake up noisy data.
 	double mean = 0;
-	double stdev = 25;
+	double stdev = 15;
 	Mat_<Vec<DENOISING_FLOAT_TYPE, 1> > channels[2];
 	channels[0] = Mat_<Vec<DENOISING_FLOAT_TYPE, 1> >(input.dims, input.size);
 	channels[1] = Mat_<Vec<DENOISING_FLOAT_TYPE, 1> >(input.dims, input.size, Vec<DENOISING_FLOAT_TYPE, 1>((DENOISING_FLOAT_TYPE)0));
@@ -621,6 +622,7 @@ int Unit_Test::denoising(int argc, char **argv)
 	channels[0].release();
 	channels[1].release();
 	noisy_input = input + noisy_input;
+//	noisy_input = input;
 	// --
 
 	double score, msr;
@@ -631,18 +633,30 @@ int Unit_Test::denoising(int argc, char **argv)
 	int nlevels = 2;
 	string fs_param_opt = "CTF3";
 	int ext_size = 12;
-	string ext_opt = "sym";
+	string ext_opt = "mir1001";
 	ML_MD_FS_Param ml_md_fs_param;
-	compose_fs_param(nlevels, ndims, fs_param_opt, ext_size, ext_opt, ml_md_fs_param);
-	ml_md_fs_param.isSym = true;
+	ret = compose_fs_param(nlevels, ndims, fs_param_opt, ext_size, ext_opt, true, ml_md_fs_param);
+	if (ret)
+	{
+		cout << "Error in FS param. " << endl;
+		return 0;
+	}
+
+//	Thresholding_Param thr_param;
+//	thr_param.c = 1;
+//	thr_param.mean = mean;
+//	thr_param.stdev = stdev;
+//	thr_param.doNormalization = true;
+//	thr_param.wwidth = 7;        //Should be odd.
+//	thr_param.thr_method = "bishrink";
 
 	Thresholding_Param thr_param;
-	thr_param.c = 1;
-	thr_param.mean = mean;
-	thr_param.stdev = stdev;
-	thr_param.doNormalization = true;
-	thr_param.wwidth = 7;
-	thr_param.thr_method = "localsoft";
+	ret = compose_thr_param(mean, stdev, 1, 7, true, "bishrink", thr_param);
+	if (ret)
+	{
+		cout << "Error in Thr param. " << endl;
+		return 0;
+	}
 	// --
 
 	thresholding_denoise<DENOISING_FLOAT_TYPE>(noisy_input, ml_md_fs_param, thr_param, denoised_output);
@@ -684,40 +698,34 @@ int Unit_Test::test_any(int argc, char **argv)
 //
 //	return 0;
 
-	Mat_<Vec<double, 2> > mat(2, (int[]){10, 10}, Vec<double, 2>(0,0));
-	mat(0,0)[0] = 3;
-	mat(0,1)[0] = 4;
-	mat(1,2)[0] = 5;
-	mat(9,9)[0] = 1;
-	mat(0,8)[0] = 7;
+	Mat_<Vec<double, 2> > mat(3, (int[]){10, 10, 10}, Vec<double, 2>(0,0));
+	for (int i = 0; i < mat.size[0]; ++i)
+	{
+		for (int j = 0; j < mat.size[1]; ++j)
+		{
+			for (int k = 0; k < mat.size[2]; ++k)
+			{
+				mat(i,j,k)[0] = 1;
+			}
+		}
+	}
 
-	mat(0,0)[1] = 3;
-	mat(0,1)[1] = 4;
-	mat(1,2)[1] = 5;
-	mat(9,9)[1] = 1;
-	mat(0,8)[1] = 7;
 
-	mat(2,2)[0] = 3;
-	mat(2,3)[0] = 3;
-	mat(2,4)[0] = 3;
-	mat(3,2)[0] = 3;
-	mat(3,3)[0] = 3;
-	mat(3,4)[0] = 3;
-	mat(4,2)[0] = 3;
-	mat(4,3)[0] = 3;
-	mat(4,4)[0] = 3;
-
-	print_mat_details_g<double, 2>(mat, 2);
+	print_mat_details_g<double, 2>(mat, 2, "Test-Data/output/origin_mat.txt");
 	cout << endl << endl;
 
-    Mat_<Vec<double, 2> > filter(2, (int[]){3,3}, Vec<double, 2>(1.0/9.0,0));
-    SmartIntArray achor(2, 1);
-    md_filtering<double>(mat, filter, achor, mat);
-    print_mat_details_g<double, 2>(mat, 2);
+	SmartIntArray border(3, 5);
+	mat_border_extension(mat, border, "blk", mat);
+	print_mat_details_g<double, 2>(mat, 2, "Test-Data/output/ext_mat.txt");
 
-    pw_abs<double>(mat, mat);
-    cout << endl << "Abs: " << endl;
-    print_mat_details_g<double,2>(mat, 2);
+//    Mat_<Vec<double, 2> > filter(3, (int[]){3,3,3}, Vec<double, 2>(1.0/27.0,0));
+//    SmartIntArray achor(3, 1);
+//    md_filtering<double>(mat, filter, achor, mat);
+//    print_mat_details_g<double, 2>(mat, 2, "Test-Data/output/conv.txt");
+
+//    pw_abs<double>(mat, mat);
+//    cout << endl << "Abs: " << endl;
+//    print_mat_details_g<double,2>(mat, 2);
 
 	return 0;
 }

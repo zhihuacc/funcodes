@@ -492,7 +492,7 @@ struct MC_Filter_Norms_Set
 
 int figure_good_mat_size(const ML_MD_FS_Param &fs_param, const SmartIntArray &mat_size, const SmartIntArray &border, SmartIntArray &better);
 
-int compose_fs_param(int nlevels, int ndims, const string &fs_param_opt, int ext_size, const string &ext_opt, ML_MD_FS_Param &ml_md_fs_param);
+int compose_fs_param(int nlevels, int ndims, const string &fs_param_opt, int ext_size, const string &ext_opt, bool isSym, ML_MD_FS_Param &ml_md_fs_param);
 
 template<typename _Tp>
 int check_mat_to_decompose(const ML_MD_FS_Param &fs_param, const Mat_<Vec<_Tp, 2> > &mat)
