@@ -2,8 +2,10 @@
 #define WAVELETS_DENOISING_H
 
 #include "../include/wavelets_toolbox.h"
-
+#include <config4cpp/Configuration.h>
 #include <opencv2/imgproc/imgproc.hpp>
+
+using namespace config4cpp;
 
 struct Thresholding_Param
 {
@@ -280,19 +282,19 @@ int thresholding(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, const str
 template <typename _Tp>
 int thresholding_denoise(const Mat_<Vec<_Tp, 2> > &noisy_input, const ML_MD_FS_Param &fs_param, const Thresholding_Param &thr_param, Mat_<Vec<_Tp, 2> > &output)
 {
-	int nlevels = fs_param.nlevels;
 	int ndims = noisy_input.dims;
 	SmartIntArray input_size(ndims, noisy_input.size);
 	SmartIntArray better_ext_border(ndims);
 
 	figure_good_mat_size(fs_param, input_size, fs_param.ext_border, better_ext_border);
 
-	cout << "Ext border: " << endl;
+	cout << endl << "Extension border: " << endl;
+	cout << "  ";
 	for (int i = 0; i < ndims; ++i)
 	{
 		cout << better_ext_border[i] << " ";
 	}
-	cout << endl << endl;
+	cout << endl;
 
 	Mat_<Vec<_Tp, 2> > ext_input, rec;
 	mat_border_extension<_Tp>(noisy_input, better_ext_border, fs_param.ext_method, ext_input);
@@ -306,18 +308,18 @@ int thresholding_denoise(const Mat_<Vec<_Tp, 2> > &noisy_input, const ML_MD_FS_P
 	decompose_by_ml_md_filter_bank2<_Tp>(fs_param, ext_input, filter_system, norms_set, coefs_set);
 	clock_t t1 = tic();
 	string msg = show_elapse(t1 - t0);
-	cout << "Dec Time: " << endl << msg << endl;
+	cout << endl << "Dec Time: " << endl << msg << endl;
 	ext_input.release();
 
-	cout << "Filter Norms: " << endl;
-	for (int i = 0; i < nlevels; ++i)
-	{
-		for (int j = 0; j < (int)norms_set[i].size(); ++j)
-		{
-			cout << norms_set[i][j] << " ";
-		}
-		cout << endl;
-	}
+//	cout << "Filter Norms: " << endl;
+//	for (int i = 0; i < nlevels; ++i)
+//	{
+//		for (int j = 0; j < (int)norms_set[i].size(); ++j)
+//		{
+//			cout << norms_set[i][j] << " ";
+//		}
+//		cout << endl;
+//	}
 
 	t0 = tic();
 	if (thr_param.doNormalization)
@@ -331,7 +333,7 @@ int thresholding_denoise(const Mat_<Vec<_Tp, 2> > &noisy_input, const ML_MD_FS_P
 	}
 	t1 = tic();
 	msg = show_elapse(t1 - t0);
-	cout << "Denoising Time: " << endl << msg << endl;
+	cout << endl << "Denoising Time: " << endl << msg << endl;
 
 	t0 = tic();
 	reconstruct_by_ml_md_filter_bank2<_Tp>(fs_param, filter_system, new_coefs_set, rec);
@@ -344,5 +346,9 @@ int thresholding_denoise(const Mat_<Vec<_Tp, 2> > &noisy_input, const ML_MD_FS_P
 
 	return 0;
 }
+
+int denoise_entry(const Configuration *cfg, const string noisy_file);
+
+int psnr_entry(const string &left, const string &right);
 
 #endif

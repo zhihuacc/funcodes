@@ -65,9 +65,9 @@ string show_elapse(clock_t t)
 	int clocks_per_msec = CLOCKS_PER_SEC / 1000;
 	int secs = t / CLOCKS_PER_SEC;
 	int msecs = (t - secs * CLOCKS_PER_SEC) / clocks_per_msec;
-	ss << "Seconds: " << secs << endl;
-	ss << "Millisecs:" << msecs << endl;
-	ss << "Totoal Clocks: " << t << endl;
+	ss << "  Seconds: " << secs << endl;
+	ss << "  Millisecs:" << msecs << endl;
+	ss << "  Totoal Clocks: " << t << endl;
 
 	return ss.str();
 }

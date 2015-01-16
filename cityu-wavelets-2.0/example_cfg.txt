@@ -1,0 +1,23 @@
+# There must be space before and after ?= .
+# You can override values in configuration file by adding command line options like this
+# $ ./cwt denoise noisy.avi -set nlevels 3
+# the command above will set 'nlevels' 3 instead of 2.
+
+default {
+
+nlevels ?= "2";
+fs ?= "CTF3";
+ext_size ?= "16";
+ext_method ?= "mir1001";
+is_sym ?= "true";
+
+doSave ?= "true";
+
+mean ?= "0";
+stdev ?= "5";
+c ?= "1";
+wwidth ?= "7";
+doNorm ?= "true";
+thr_method ?= "localsoft";
+
+};

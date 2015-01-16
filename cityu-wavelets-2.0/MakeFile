@@ -6,14 +6,14 @@ LIB_PATH=/usr/local/lib
 
 CPP_FLAGS=-g -Wall -O3 -std=c++0x -I/usr/local/include
 LD_FLAGS=-L/usr/local/lib
-LIBS=-lfftw3 -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_ml -lopencv_video -lopencv_features2d -lopencv_calib3d     \
-            -lopencv_objdetect -lopencv_contrib -lopencv_legacy -lopencv_flann
+LIBS=-lfftw3 -lopencv_core -lopencv_imgproc -lopencv_highgui -lconfig4cpp
+
 CC=g++
 LINKER=g++
 
-ALL:cityu-wavelets-2.0
+ALL:cwt2
 	
-cityu-wavelets-2.0:$(OBJS)
+cwt2:$(OBJS)
 	$(LINKER) -o $@  $(OBJS) $(LIBS) $(LD_FLAGS)
 
 
@@ -22,5 +22,5 @@ cityu-wavelets-2.0:$(OBJS)
 
 #Be careful to modify this rule, since it may remove files which should NOT be removed.
 clean:
-	-rm -r $(OBJS) cityu-wavelets-2.0
+	-rm -r $(OBJS) cwt2
 	
