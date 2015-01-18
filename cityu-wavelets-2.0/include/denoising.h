@@ -72,51 +72,45 @@ int bishrink(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, d
 		new_coefs_set[cur_lvl].resize(this_level_set.size());
 		for (int idx = 0; idx < (int)this_level_set.size(); ++idx)
 		{
-			Mat_<Vec<_Tp, 2> > Y = this_level_set[idx].clone();
-			Mat_<Vec<_Tp, 2> > Y_par = lower_level_set[idx].clone();
+			const Mat_<Vec<_Tp, 2> > Y = this_level_set[idx];
+			Mat_<Vec<_Tp, 2> > Y_par;
 			Mat_<Vec<_Tp, 2> > Y_abs, Y_par_abs;
 			Mat_<Vec<_Tp, 2> > T;
 			Mat_<Vec<_Tp, 2> > T_abs;
-			Mat_<Vec<_Tp, 2> > R;
+			Mat_<Vec<_Tp, 2> > R, Y2;
 			complex<_Tp> infinitesimal(1e-16,0);
-			pw_abs<_Tp>(Y, Y_abs);
-			pw_pow<_Tp>(Y_abs, static_cast<_Tp>(2), T);
+			pw_l2square<_Tp>(Y, Y2);
+			T = Y2.clone();
 
-			SmartIntArray border(nd, wwidth - 1);
-			mat_border_extension(T, border, "blk", T);
 			md_filtering<_Tp>(T, avg_window, anchor, T);
-			mat_border_extension(T, border, "cut", T);
-
 			T -= Scalar(sigma * sigma, 0);
 			pw_max<_Tp>(T, infinitesimal, T);
-			pw_sqrt<_Tp>(T, T);
-			pw_div<_Tp>(complex<_Tp>(c*sigma*sigma, 0), T, T);
+			pw_sqrt<_Tp, 2>(T, T, 0);
+			pw_div<_Tp, 2>(Vec<_Tp, 2>(c*sigma*sigma, 0), T, T, 0);
 			// T is ready and real matrix
 
+			Y_par = lower_level_set[idx].clone();
 			SmartIntArray times(Y.dims);
 			for (int i = 0; i < Y.dims; ++i)
 			{
 				times[i] = Y.size[i] / Y_par.size[i];
 			}
 			interpolate<_Tp>(Y_par, times, Y_par);
-			Mat_<Vec<_Tp, 2> > tmp0, tmp1;
-			pw_pow<_Tp>(Y_abs, static_cast<_Tp>(2), tmp0);
-			pw_abs<_Tp>(Y_par, tmp1);
-			pw_pow<_Tp>(tmp1, static_cast<_Tp>(2), tmp1);
-			pw_sqrt<_Tp>(tmp0 + tmp1, R);
+			pw_l2square<_Tp>(Y_par, Y_par);
+			pw_sqrt<_Tp, 2>(Y2 + Y_par, R, 0);
 			R -= T;
-			tmp0.release();
-			tmp1.release();
 
-			Mat_<Vec<_Tp, 2> > mask, ratio;
+			Mat_<Vec<_Tp, 2> > ratio;
 			pw_max<_Tp>(R, complex<_Tp>(0,0), R);  // This equals R * (R > 0)
 			// R is ready
 
-			Mat_<Vec<_Tp, 2> > r_t = R + T;
-			pw_max<_Tp>(r_t, infinitesimal, r_t);
-			pw_div<_Tp>(R, r_t, ratio);
+//			Mat_<Vec<_Tp, 2> > r_t = R + T;
+			T += R;
+			pw_max<_Tp>(T, infinitesimal, T);
+			pw_div<_Tp, 2>(R, T, T, 0);
 
-			pw_mul<_Tp>(Y, ratio, new_coefs_set[cur_lvl][idx]);
+			pw_mul<_Tp>(Y, T, T);
+			new_coefs_set[cur_lvl][idx] = T;
 		}
 	}
 	new_coefs_set[nlevels - 1] = coefs_set[nlevels - 1];
@@ -124,6 +118,73 @@ int bishrink(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, d
 
 	return 0;
 }
+
+//template<typename _Tp>
+//int local_soft(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, double c, double sigma, typename ML_MC_Coefs_Set<_Tp>::type &thr_set)
+//{
+//	int nd = coefs_set[0][0].dims;
+//	SmartIntArray winsize(nd, wwidth);
+//	Mat_<Vec<_Tp, 2> > avg_window(nd, winsize, Vec<_Tp, 2>(1.0 / pow(wwidth, nd),0));
+//
+//	typename ML_MC_Coefs_Set<_Tp>::type new_coefs_set;
+//	new_coefs_set.reserve(coefs_set.size());
+//	new_coefs_set.resize(coefs_set.size());
+//	SmartIntArray anchor(nd, wwidth / 2);
+//	for (int cur_lvl = 0; cur_lvl < (int)coefs_set.size(); ++cur_lvl)
+//	{
+//		const typename MC_Coefs_Set<_Tp>::type &this_level_set = coefs_set[cur_lvl];
+//		new_coefs_set[cur_lvl].reserve(this_level_set.size());
+//		new_coefs_set[cur_lvl].resize(this_level_set.size());
+//		for (int idx = 0; idx < (int)this_level_set.size(); ++idx)
+//		{
+//			const Mat_<Vec<_Tp, 2> > Y = this_level_set[idx];
+//			Mat_<Vec<_Tp, 2> > Y_abs;
+//			Mat_<Vec<_Tp, 2> > T;
+//			Mat_<Vec<_Tp, 2> > T_abs;
+//			complex<_Tp> infinitesimal(1e-16, 0);
+//
+////			pw_l2square<_Tp>(Y, T);
+////			pw_sqrt<_Tp>(T, Y_abs);
+//			pw_abs<_Tp>(Y, Y_abs);
+//			pw_pow<_Tp>(Y_abs, static_cast<_Tp>(2), T);
+////			pw_l2square<_Tp>(Y, T);
+//
+//			SmartIntArray border(nd, wwidth - 1);
+////			mat_border_extension<_Tp>(T, border, "blk", T);
+//			md_filtering<_Tp>(T, avg_window, anchor, T);
+////			mat_border_extension<_Tp>(T, border, "cut", T);
+//
+//			T -= Scalar(sigma * sigma, 0);
+//			pw_max<_Tp>(T, infinitesimal, T);
+//			pw_sqrt<_Tp>(T, T);
+//			pw_div<_Tp>(complex<_Tp>(c*sigma*sigma, 0), T, T);
+//			// T is ready and real matrix
+//
+//
+//			Mat_<Vec<_Tp, 2> > mask;
+//			pw_less<_Tp>(T, Y_abs, mask);
+//
+//			pw_max<_Tp>(Y_abs, infinitesimal, Y_abs);
+//			Mat_<Vec<_Tp, 2> > ratio;
+//			pw_div<_Tp>(T, Y_abs, ratio);
+//
+//			T.release();
+//
+//			ratio = Scalar(1.0,0) - ratio;
+//			// ratio is ready
+//
+//			Mat_<Vec<_Tp, 2> > new_Y;
+////			pw_mul<_Tp>(Y, ratio, new_Y);
+////			pw_mul<_Tp>(mask, new_Y, new_Y);
+//			pw_mul<_Tp>(Y, ratio, new_Y, mask);
+//
+//			new_coefs_set[cur_lvl][idx] = new_Y;
+//		}
+//	}
+//
+//	thr_set = new_coefs_set;
+//	return 0;
+//}
 
 template<typename _Tp>
 int local_soft(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, double c, double sigma, typename ML_MC_Coefs_Set<_Tp>::type &thr_set)
@@ -149,38 +210,29 @@ int local_soft(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth,
 			Mat_<Vec<_Tp, 2> > T_abs;
 			complex<_Tp> infinitesimal(1e-16, 0);
 
-			pw_abs<_Tp>(Y, Y_abs);
-			pw_pow<_Tp>(Y_abs, static_cast<_Tp>(2), T);
+			pw_l2square<_Tp>(Y, T);
+			pw_sqrt<_Tp, 2>(T, Y_abs, 0);
 
-			SmartIntArray border(nd, wwidth - 1);
-			mat_border_extension(T, border, "blk", T);
 			md_filtering<_Tp>(T, avg_window, anchor, T);
-			mat_border_extension(T, border, "cut", T);
 
 			T -= Scalar(sigma * sigma, 0);
 			pw_max<_Tp>(T, infinitesimal, T);
-			pw_sqrt<_Tp>(T, T);
-			pw_div<_Tp>(complex<_Tp>(c*sigma*sigma, 0), T, T);
-			// T is ready and real matrix
-
+			pw_sqrt<_Tp, 2>(T, T, 0);
+			pw_div<_Tp, 2>(Vec<_Tp, 2>(c*sigma*sigma, 0), T, T, 0);
+			// T is ready
 
 			Mat_<Vec<_Tp, 2> > mask;
 			pw_less<_Tp>(T, Y_abs, mask);
 
 			pw_max<_Tp>(Y_abs, infinitesimal, Y_abs);
-			Mat_<Vec<_Tp, 2> > ratio;
-			pw_div<_Tp>(T, Y_abs, ratio);
+			pw_div<_Tp, 2>(T, Y_abs, T, 0);
 
-			T.release();
+			T = Scalar(1.0,0) - T;
+			// T is ratio and ratio is ready
 
-			ratio = Scalar(1.0,0) - ratio;
-			// ratio is ready
+			pw_mul<_Tp>(Y, T, T, mask);
 
-			Mat_<Vec<_Tp, 2> > new_Y;
-			pw_mul<_Tp>(Y, ratio, new_Y);
-			pw_mul<_Tp>(mask, new_Y, new_Y);
-
-			new_coefs_set[cur_lvl][idx] = new_Y;
+			new_coefs_set[cur_lvl][idx] = T;
 		}
 	}
 
@@ -207,47 +259,37 @@ int local_adapt(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth
 		new_coefs_set[cur_lvl].resize(this_level_set.size());
 		for (int idx = 0; idx < (int)this_level_set.size(); ++idx)
 		{
-			Mat_<Vec<_Tp, 2> > Y = this_level_set[idx].clone();
+			Mat_<Vec<_Tp, 2> > Y = this_level_set[idx];
 			Mat_<Vec<_Tp, 2> > Y_abs;
 			Mat_<Vec<_Tp, 2> > T;
 			Mat_<Vec<_Tp, 2> > T_abs;
 			complex<_Tp> infinitesimal(1e-16, 0);
 			pw_abs<_Tp>(Y, Y_abs);
 
-			SmartIntArray border(nd, wwidth - 1);
-			mat_border_extension(Y_abs, border, "blk", T);
-			md_filtering<_Tp>(T, avg_window, anchor, T);
-			mat_border_extension(T, border, "cut", T);
+			md_filtering<_Tp>(Y_abs, avg_window, anchor, T);
 
-			pw_pow<_Tp>(T, static_cast<_Tp>(2), T);
+			pw_pow<_Tp, 2>(T, static_cast<_Tp>(2), T, 0);
 
 			T -= Scalar(sigma * sigma, 0);
 			pw_max<_Tp>(T, infinitesimal, T);
-			pw_sqrt<_Tp>(T, T);
-			pw_div<_Tp>(complex<_Tp>(c*sigma*sigma, 0), T, T);
+			pw_sqrt<_Tp, 2>(T, T, 0);
+			pw_div<_Tp, 2>(Vec<_Tp, 2>(c*sigma*sigma,0), T, T, 0);
 			// T is ready and real matrix
 
 			Mat_<Vec<_Tp, 2> > mask;
 			pw_less<_Tp>(T, Y_abs, mask);
 
 			pw_max<_Tp>(Y_abs, infinitesimal, Y_abs);
-			Mat_<Vec<_Tp, 2> > ratio;
-			pw_div<_Tp>(T, Y_abs, ratio);
+			pw_div<_Tp, 2>(T, Y_abs, T, 0);
+			// T is ratio
 
-			T.release();
-
-			ratio = Scalar(1.0,0) - ratio;
+			T = Scalar(1.0,0) - T;
 			// ratio is ready
 
 			Mat_<Vec<_Tp, 2> > new_Y;
-			pw_mul<_Tp>(Y, ratio, new_Y);
-			pw_mul<_Tp>(mask, new_Y, new_Y);
+			pw_mul<_Tp>(Y, T, T, mask);
 
-			new_coefs_set[cur_lvl][idx] = new_Y;
-
-//			stringstream ss;
-//			ss << "Test-Data/output/new-coef-" << cur_lvl << "-" << idx <<".txt";
-//			print_mat_details_g<_Tp>(new_Y, 2, ss.str());
+			new_coefs_set[cur_lvl][idx] = T;
 		}
 	}
 

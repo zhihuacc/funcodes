@@ -62,15 +62,16 @@ int normalized_fft(const Mat_<Vec<_Tp, 2> > &time_domain, Mat_<Vec<_Tp, 2> > &fr
 	fftw_complex *after;
 	fftw_plan plan;
 
-	Mat_<Vec<_Tp, 2> > tmp(time_domain.dims, time_domain.size);
+//	Mat_<Vec<_Tp, 2> > tmp(time_domain.dims, time_domain.size);
+	freq_domain.create(time_domain.dims, time_domain.size);
 	before = reinterpret_cast<fftw_complex *>(time_domain.data);
-	after = reinterpret_cast<fftw_complex *>(tmp.data);
+	after = reinterpret_cast<fftw_complex *>(freq_domain.data);
 	// Here we can only use 'FFTW_ESTIMATE', because 'FFTW_MEASURE' would touch 'before'.
 	plan = fftw_plan_dft(time_domain.dims, time_domain.size, before, after, FFTW_FORWARD, FFTW_ESTIMATE);
 	fftw_execute(plan);
 	fftw_destroy_plan(plan);
 
-	freq_domain = tmp  * (1.0 / sqrt(tmp.total()));
+	freq_domain = freq_domain  * (1.0 / sqrt(freq_domain.total()));
 
     return 0;
 }
@@ -93,17 +94,17 @@ int normalized_ifft(const Mat_<Vec<_Tp, 2> > &freq_domain, Mat_<Vec<_Tp, 2> > &t
 	fftw_complex *after;
 	fftw_plan plan;
 
-	Mat_<Vec<_Tp, 2> > tmp(freq_domain.dims, freq_domain.size);
-
+//	Mat_<Vec<_Tp, 2> > tmp(freq_domain.dims, freq_domain.size);
+	time_domain.create(freq_domain.dims, freq_domain.size);
 	before = reinterpret_cast<fftw_complex*>(freq_domain.data);
-	after = reinterpret_cast<fftw_complex*>(tmp.data);
+	after = reinterpret_cast<fftw_complex*>(time_domain.data);
 
 	// Here we can only use 'FFTW_ESTIMATE', because 'FFTW_MEASURE' would touch 'before'.
 	plan = fftw_plan_dft(freq_domain.dims, freq_domain.size, before, after, FFTW_BACKWARD, FFTW_ESTIMATE);
 	fftw_execute(plan);
     fftw_destroy_plan(plan);
 
-    time_domain = tmp  * (1.0 / sqrt(tmp.total()));
+    time_domain = time_domain  * (1.0 / sqrt(time_domain.total()));
 
     return 0;
 }
@@ -297,16 +298,48 @@ int pw_mul(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat_
     	return -1;
     }
 
-    Mat_<Vec<_Tp, 2> > product_mat(left.dims, left.size);
+//    Mat_<Vec<_Tp, 2> > product_mat(left.dims, left.size);
+    product.create(left.dims, left.size);
     int N = left.total();
     complex<_Tp> *pleft = reinterpret_cast<complex<_Tp> *>(left.data), *pright = reinterpret_cast<complex<_Tp> *>(right.data),
-    		     *pprod  = reinterpret_cast<complex<_Tp> *>(product_mat.data);
+    		     *pprod  = reinterpret_cast<complex<_Tp> *>(product.data);
     for (int i = 0; i < N; ++i, ++pleft, ++pright, ++pprod)
     {
     	*pprod = (*pleft) * (*pright);
     }
 
-    product = product_mat;
+//    product = product_mat;
+    return 0;
+}
+
+template<typename _Tp>
+int pw_mul(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat_<Vec<_Tp, 2> > &product, const Mat_<Vec<_Tp, 2> > &mask)
+{
+    // Need more check if that left and right match
+    if (!isGoodMat(left) || !isGoodMat(right) || !sameSize(left, right) || !sameSize(right, mask))
+    {
+    	return -1;
+    }
+
+//    Mat_<Vec<_Tp, 2> > product_mat(left.dims, left.size, Vec<_Tp, 2>(0,0));
+    product.create(left.dims, left.size);
+    int N = left.total();
+    complex<_Tp> *pleft = reinterpret_cast<complex<_Tp> *>(left.data), *pright = reinterpret_cast<complex<_Tp> *>(right.data),
+    		     *pprod  = reinterpret_cast<complex<_Tp> *>(product.data),
+    		     *pm = reinterpret_cast<complex<_Tp> *>(mask.data);
+    for (int i = 0; i < N; ++i, ++pleft, ++pright, ++pprod, ++pm)
+    {
+    	if ((*pm).real() > 0)
+    	{
+    		*pprod = (*pleft) * (*pright);
+    	}
+    	else
+    	{
+    		*pprod = complex<_Tp>(0,0);
+    	}
+    }
+
+//    product = product_mat;
     return 0;
 }
 
@@ -356,6 +389,43 @@ int pw_div(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat_
     return 0;
 }
 
+template<typename _Tp, int cn>
+int pw_div(const Mat_<Vec<_Tp, cn> > &left, const Mat_<Vec<_Tp, cn> > &right, Mat_<Vec<_Tp, cn> > &res, int c)
+{
+    // Need more check if that left and right match
+    if (!isGoodMat(left) || !isGoodMat(right) || !sameSize(left, right))
+    {
+    	return -1;
+    }
+
+//    Mat_<Vec<_Tp, cn> > res_mat = left.clone();
+    res.create(left.dims, left.size);
+    int N = left.total();
+    Vec<_Tp, cn> *pleft = reinterpret_cast<Vec<_Tp, cn> *>(left.data), *pright = reinterpret_cast<Vec<_Tp, cn> *>(right.data),
+    		     *pres  = reinterpret_cast<Vec<_Tp, cn> *>(res.data);
+
+    if (0 <= c && c < cn)
+    {
+		for (int i = 0; i < N; ++i, ++pleft, ++pright, ++pres)
+		{
+			(*pres)[c] = (*pleft)[c] / (*pright)[c];
+		}
+    }
+    else if (c == cn)
+    {
+		for (int i = 0; i < N; ++i, ++pleft, ++pright, ++pres)
+		{
+			for (int j = 0; j < cn; ++j)
+			{
+				(*pres)[j] = (*pleft)[j] / (*pright)[j];
+			}
+		}
+    }
+//    res = res_mat;
+
+    return 0;
+}
+
 template<typename _Tp>
 int pw_div(const Mat_<Vec<_Tp, 2> > &left, const complex<_Tp> alpha, Mat_<Vec<_Tp, 2> > &res)
 {
@@ -379,6 +449,7 @@ int pw_div(const Mat_<Vec<_Tp, 2> > &left, const complex<_Tp> alpha, Mat_<Vec<_T
     return 0;
 }
 
+
 template<typename _Tp>
 int pw_div(const complex<_Tp> alpha, const Mat_<Vec<_Tp, 2> > &right, Mat_<Vec<_Tp, 2> > &res)
 {
@@ -401,6 +472,43 @@ int pw_div(const complex<_Tp> alpha, const Mat_<Vec<_Tp, 2> > &right, Mat_<Vec<_
     return 0;
 }
 
+template<typename _Tp, int cn>
+int pw_div(const Vec<_Tp, cn> alpha, const Mat_<Vec<_Tp, cn> > &right, Mat_<Vec<_Tp, cn> > &res, int c)
+{
+    // Need more check if that left and right match
+    if (!isGoodMat(right))
+    {
+    	return -1;
+    }
+
+//    Mat_<Vec<_Tp, cn> > res_mat = right.clone();
+    res.create(right.dims, right.size);
+    int N = right.total();
+    Vec<_Tp, cn> *pright = reinterpret_cast<Vec<_Tp, cn> *>(right.data),
+    		     *pres  = reinterpret_cast<Vec<_Tp, cn> *>(res.data);
+
+    if (0 <= c && c < cn)
+    {
+		for (int i = 0; i < N; ++i, ++pright, ++pres)
+		{
+			(*pres)[c] = alpha[c] / (*pright)[c];
+		}
+    }
+    else if (c == cn)
+    {
+		for (int i = 0; i < N; ++i, ++pright, ++pres)
+		{
+			for (int j = 0; j < cn; ++j)
+			{
+				(*pres)[j] = alpha[j] / (*pright)[j];
+			}
+		}
+    }
+//    res = res_mat;
+
+    return 0;
+}
+
 /*
  * Do complex-value pow point-wisely. NO memory allocation happens inside.
  */
@@ -418,7 +526,7 @@ int pw_pow(const Mat_<Vec<_Tp, 2> > &base, _Tp expo, Mat_<Vec<_Tp, 2> > &res)
     int N = base.total();
     complex<_Tp> *pbase = reinterpret_cast<complex<_Tp> *>(base.data),
     		     *pres  = reinterpret_cast<complex<_Tp> *>(res_mat.data);
-    //TODO 'fabs' is not good practice for template programming
+    //TODO 'fabs' may not be a good practice for template programming
     if (fabs(expo - 2) <= numeric_limits<_Tp>::epsilon())
     {
     	for (int i = 0; i < N; ++i, ++pbase, ++pres)
@@ -438,18 +546,79 @@ int pw_pow(const Mat_<Vec<_Tp, 2> > &base, _Tp expo, Mat_<Vec<_Tp, 2> > &res)
 	return 0;
 }
 
+template<typename _Tp, int cn>
+int pw_pow(const Mat_<Vec<_Tp, cn> > &base, _Tp expo, Mat_<Vec<_Tp, cn> > &res, int c)
+{
+	if (!isGoodMat(base))
+	{
+		return -1;
+	}
+
+	// No need to zero.
+//	Mat_<Vec<_Tp, cn> > res_mat = base.clone();
+	res.create(base.dims, base.size);
+    int N = base.total();
+    Vec<_Tp, cn> *pbase = reinterpret_cast<Vec<_Tp, cn> *>(base.data),
+    		     *pres  = reinterpret_cast<Vec<_Tp, cn> *>(res.data);
+    //TODO 'fabs' may not be a good practice for template programming
+    if (0 <= c && c < cn)
+    {
+		if (fabs(expo - 2) <= numeric_limits<_Tp>::epsilon())
+		{
+			for (int i = 0; i < N; ++i, ++pbase, ++pres)
+			{
+				(*pres)[c] = (*pbase)[c] * (*pbase)[c]; //TODO I guess this is faster than pow(*pbase, 2).
+			}
+		}
+		else
+		{
+			for (int i = 0; i < N; ++i, ++pbase, ++pres)
+			{
+				(*pres)[c] = static_cast<_Tp>( pow( (*pbase)[c], expo ) );
+			}
+		}
+    }
+    else if (c == cn)
+    {
+		if (fabs(expo - 2) <= numeric_limits<_Tp>::epsilon())
+		{
+			for (int i = 0; i < N; ++i, ++pbase, ++pres)
+			{
+				for (int j = 0; j < cn; ++j)
+				{
+					(*pres)[j] = (*pbase)[j] * (*pbase)[j]; //TODO I guess this is faster than pow(*pbase, 2).
+				}
+			}
+		}
+		else
+		{
+			for (int i = 0; i < N; ++i, ++pbase, ++pres)
+			{
+				for (int j = 0; j < cn; ++j)
+				{
+					(*pres)[j] = static_cast<_Tp>( pow((*pbase)[j], expo) );
+				}
+			}
+		}
+    }
+//    res = res_mat;
+
+	return 0;
+}
+
 template<typename _Tp>
 int pw_abs(const Mat_<Vec<_Tp, 2> > &base, Mat_<Vec<_Tp, 2> > &res)
 {
-	Mat_<Vec<_Tp, 2> > res_mat(base.dims, base.size, Vec<_Tp, 2>(0,0));
+//	Mat_<Vec<_Tp, 2> > res_mat(base.dims, base.size, Vec<_Tp, 2>(0,0));
+	res.create(base.dims, base.size);
     int N = base.total();
     complex<_Tp> *pbase = reinterpret_cast<complex<_Tp> *>(base.data),
-    		     *pres  = reinterpret_cast<complex<_Tp> *>(res_mat.data);
+    		     *pres  = reinterpret_cast<complex<_Tp> *>(res.data);
     for (int i = 0; i < N; ++i, ++pbase, ++pres)
     {
     	*pres = abs<_Tp>(*pbase);
     }
-    res = res_mat;
+//    res = res_mat;
 
     return 0;
 }
@@ -478,6 +647,41 @@ int pw_sqrt(const Mat_<Vec<_Tp, 2> > &base, Mat_<Vec<_Tp, 2> > &res)
 	return 0;
 }
 
+template<typename _Tp, int cn>
+int pw_sqrt(const Mat_<Vec<_Tp, cn> > &base, Mat_<Vec<_Tp, cn> > &res, int c)
+{
+	if (!isGoodMat(base))
+	{
+		return -1;
+	}
+
+//	Mat_<Vec<_Tp, cn> > res_mat = base.clone();
+	res.create(base.dims, base.size);
+    int N = base.total();
+    Vec<_Tp, cn> *pbase = reinterpret_cast<Vec<_Tp, cn> *>(base.data),
+    		     *pres  = reinterpret_cast<Vec<_Tp, cn> *>(res.data);
+    if (0 <= c && c < cn)
+    {
+		for (int i = 0; i < N; ++i, ++pbase, ++pres)
+		{
+			(*pres)[c] = static_cast<_Tp>( sqrt( (*pbase)[c] ) );
+		}
+    }
+    else if (c == cn)
+    {
+		for (int i = 0; i < N; ++i, ++pbase, ++pres)
+		{
+			for (int j = 0; j < cn; ++j)
+			{
+				(*pres)[j] = static_cast<_Tp>( sqrt( (*pbase)[j] ) );
+			}
+		}
+    }
+//    res = res_mat;
+
+	return 0;
+}
+
 template<typename _Tp>
 int pw_less(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat_<Vec<_Tp, 2> > &res)
 {
@@ -486,15 +690,17 @@ int pw_less(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat
     	return -1;
     }
 
-	Mat_<Vec<_Tp, 2> > res_mat(left.dims, left.size, Vec<_Tp, 2>(0,0));
+//	Mat_<Vec<_Tp, 2> > res_mat(left.dims, left.size, Vec<_Tp, 2>(0,0));
+    res.create(left.dims, left.size);
     int N = left.total();
     complex<_Tp> *pleft = reinterpret_cast<complex<_Tp> *>(left.data), *pright = reinterpret_cast<complex<_Tp> *>(right.data),
-    		     *pres  = reinterpret_cast<complex<_Tp> *>(res_mat.data);
+    		     *pres  = reinterpret_cast<complex<_Tp> *>(res.data);
     for (int i = 0; i < N; ++i, ++pleft, ++pright, ++pres)
     {
     	(*pres).real( (*pleft).real() < (*pright).real() );
+    	(*pres).imag(0);
     }
-    res = res_mat;
+//    res = res_mat;
 
 	return 0;
 }
@@ -604,15 +810,17 @@ int pw_max(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat_
 template<typename _Tp>
 int pw_max(const Mat_<Vec<_Tp, 2> > &left, const complex<_Tp> &alpha, Mat_<Vec<_Tp, 2> > &res)
 {
-	Mat_<Vec<_Tp, 2> > res_mat(left.dims, left.size, Vec<_Tp, 2>(0,0));
+//	Mat_<Vec<_Tp, 2> > res_mat(left.dims, left.size, Vec<_Tp, 2>(0,0));
+	res.create(left.dims, left.size);
     int N = left.total();
     complex<_Tp> *pleft = reinterpret_cast<complex<_Tp> *>(left.data),
-    		     *pres  = reinterpret_cast<complex<_Tp> *>(res_mat.data);
+    		     *pres  = reinterpret_cast<complex<_Tp> *>(res.data);
     for (int i = 0; i < N; ++i, ++pleft, ++pres)
     {
     	(*pres).real( max<_Tp>((*pleft).real(), alpha.real()) );
+    	(*pres).imag(0);
     }
-    res = res_mat;
+//    res = res_mat;
 	return 0;
 }
 
@@ -633,6 +841,30 @@ int pw_min(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat_
     	(*pres).real( min<_Tp>((*pleft).real(), (*pright).real()) );
     }
     res = res_mat;
+	return 0;
+}
+
+template<typename _Tp>
+int pw_l2square(const Mat_<Vec<_Tp, 2> > &mat, Mat_<Vec<_Tp, 2> > &res)
+{
+	if (!isGoodMat(mat))
+	{
+		return -1;
+	}
+
+//	Mat_<Vec<_Tp, 2> > res_mat(mat.dims, mat.size, Vec<_Tp, 2>(0,0));
+	res.create(mat.dims, mat.size);
+    int N = mat.total();
+    complex<_Tp> *pbase = reinterpret_cast<complex<_Tp> *>(mat.data),
+    		     *pres  = reinterpret_cast<complex<_Tp> *>(res.data);
+    for (int i = 0; i < N; ++i, ++pbase, ++pres)
+    {
+    	_Tp real = (*pbase).real(), imag = (*pbase).imag();
+    	(*pres).real( real * real + imag * imag );
+    	(*pres).imag(0);
+    }
+//    res = res_mat;
+
 	return 0;
 }
 
@@ -1781,11 +2013,11 @@ int md_filtering(const Mat_<Vec<_Tp, 2> > &input, const Mat_<Vec<_Tp, 2> > &filt
 
 
 	Mat_<Vec<_Tp, 2> > fd_filter, fd_input;
-	normalized_fft<_Tp>(full_filter, fd_filter);
-	normalized_fft<_Tp>(input, fd_input);
-	pw_mul<_Tp>(fd_input, fd_filter, fd_input);
+	normalized_fft<_Tp>(full_filter, full_filter);
+	normalized_fft<_Tp>(input, filtered);
+	pw_mul<_Tp>(filtered, full_filter, filtered);
 	cur_pos1 = SmartIntArray::konst(input_dims, 0);
-	range1 = SmartIntArray(input_dims, fd_input.size);
+	range1 = SmartIntArray(input_dims, filtered.size);
 	{
 		int src_dims;
 		SmartIntArray src_start_pos;
@@ -1826,14 +2058,14 @@ int md_filtering(const Mat_<Vec<_Tp, 2> > &input, const Mat_<Vec<_Tp, 2> > &filt
 			{
 				dot += (double)center[i] * src_cur_pos[i] / range1[i];
 			}
-			fd_input.template at<complex<_Tp> >(src_cur_pos) *= complex<_Tp>(cos(2 * M_PI * dot), sin(2 * M_PI * dot));
+			filtered.template at<complex<_Tp> >(src_cur_pos) *= complex<_Tp>(cos(2 * M_PI * dot), sin(2 * M_PI * dot));
 			//--
 
 			cur_dim = src_dims - 1;
 			src_cur_pos[cur_dim] += src_step[cur_dim];
 		}
 	}
-	normalized_ifft<_Tp>(fd_input, filtered);
+	normalized_ifft<_Tp>(filtered, filtered);
 
 	filtered = filtered * sqrt(filtered.total());
 

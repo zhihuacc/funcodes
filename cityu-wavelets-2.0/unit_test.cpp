@@ -613,7 +613,7 @@ int Unit_Test::denoising(int argc, char **argv)
 
 	//-- Fake up noisy data.
 	double mean = 0;
-	double stdev = 20;
+	double stdev = 5;
 	Mat_<Vec<DENOISING_FLOAT_TYPE, 1> > channels[2];
 	channels[0] = Mat_<Vec<DENOISING_FLOAT_TYPE, 1> >(input.dims, input.size);
 	channels[1] = Mat_<Vec<DENOISING_FLOAT_TYPE, 1> >(input.dims, input.size, Vec<DENOISING_FLOAT_TYPE, 1>((DENOISING_FLOAT_TYPE)0));
@@ -687,16 +687,35 @@ int Unit_Test::psnr_test(int argc, char **argv)
 int Unit_Test::test_any(int argc, char **argv)
 {
 
-//	Media_Format mfmt2;
-//	Mat_<Vec<double, 2> > mat2;
-//	load_as_tensor<double>("Test-Data/Lena512.png", mat2, &mfmt2);
-//
-//	mat2.size[0] = 272;
-//	mat2.size[1] = 168;
-//
-//	save_as_media<double>("Test-Data/output/Lena272-168.png", mat2, &mfmt2);
-//
-//	return 0;
+	Media_Format mfmt2;
+	Mat_<Vec<double, 2> > mat2;
+	load_as_tensor<double>("Test-Data/Lena512.png", mat2, &mfmt2);
+
+	int nd = 2;
+	int wwidth = 7;
+	SmartIntArray winsize(nd, wwidth);
+	Mat_<Vec<double, 2> > avg_window(nd, winsize, Vec<double, 2>(1.0 / pow(wwidth, nd),0));
+	SmartIntArray anchor(nd, wwidth / 2);
+	SmartIntArray border(nd, wwidth - 1);
+
+	mat_border_extension<double>(mat2, border, "blk", mat2);
+	md_filtering<double>(mat2, avg_window, anchor, mat2);
+	mat_border_extension<double>(mat2, border, "cut", mat2);
+
+	clock_t t0 = tic();
+	for (int i = 0; i < 10; ++i)
+	{
+		mat_border_extension<double>(mat2, border, "blk", mat2);
+		md_filtering<double>(mat2, avg_window, anchor, mat2);
+		mat_border_extension<double>(mat2, border, "cut", mat2);
+	}
+	clock_t t1 = tic();
+	string msg = show_elapse(t1 - t0);
+	cout << "md_filtering" << endl << msg << endl;
+
+	save_as_media<double>("Test-Data/output/Lena272-168.png", mat2, &mfmt2);
+
+	return 0;
 
 	Mat_<Vec<double, 2> > mat(3, (int[]){10, 10, 10}, Vec<double, 2>(0,0));
 	for (int i = 0; i < mat.size[0]; ++i)
@@ -714,9 +733,11 @@ int Unit_Test::test_any(int argc, char **argv)
 	print_mat_details_g<double, 2>(mat, 2, "Test-Data/output/origin_mat.txt");
 	cout << endl << endl;
 
+	{
 	SmartIntArray border(3, 5);
 	mat_border_extension(mat, border, "blk", mat);
 	print_mat_details_g<double, 2>(mat, 2, "Test-Data/output/ext_mat.txt");
+	}
 
 //    Mat_<Vec<double, 2> > filter(3, (int[]){3,3,3}, Vec<double, 2>(1.0/27.0,0));
 //    SmartIntArray achor(3, 1);

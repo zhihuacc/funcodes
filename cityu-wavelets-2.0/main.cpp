@@ -12,10 +12,10 @@ int cmd_config_parse(int argc, char **argv);
 
 int main(int argc, char **argv)
 {
-	setlocale(LC_ALL, "");
-	cmd_config_parse(argc, argv);
-
-	return 0;
+//	setlocale(LC_ALL, "");
+//	cmd_config_parse(argc, argv);
+//
+//	return 0;
 
 	Unit_Test unit_test;
 //	unit_test.psnr_test(argc, argv);
