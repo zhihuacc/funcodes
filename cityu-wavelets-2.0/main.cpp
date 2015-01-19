@@ -5,6 +5,7 @@
 #include "include/wavelets_toolbox.h"
 #include "unit_test.h"
 #include "include/denoising.h"
+#include "include/commands.h"
 
 using namespace config4cpp;
 
@@ -146,31 +147,6 @@ int cmd_config_parse(int argc, char **argv)
 
 		string sub_cmd(argv[1]);
 
-//		cfg->insertString(param_scope.c_str(), "cfg", "./example_cfg.txt");
-//		for (int i = 3; i < argc;)
-//		{
-//			string this_arg(argv[i]);
-//			if (this_arg == "-set")
-//			{
-//				if (i + 2 >= argc)
-//				{
-//					cout << "Cmd Arguments Wrong!" << endl;
-//					exit(0);
-//				}
-//
-//				cfg->insertString(param_scope.c_str(), argv[i + 1], argv[i + 2]);
-//				i += 3;
-//			}
-//		}
-//
-//		string cfg_file(cfg->lookupString(param_scope.c_str(), "cfg"));
-//
-//		if (!cfg_file.empty())
-//		{
-//			cfg->parse(cfg_file.c_str());
-//		}
-
-
 		if (sub_cmd == "denoise")
 		{
 
@@ -182,8 +158,14 @@ int cmd_config_parse(int argc, char **argv)
 		{
 			string left_file(argv[2]);
 			string right_file(argv[3]);
-			prepopulate_config(cfg, argc - 4, argv + 4);
+//			prepopulate_config(cfg, argc - 4, argv + 4);
 			psnr_entry(left_file, right_file);
+		}
+		else if (sub_cmd == "cvtxml")
+		{
+			string fn(argv[2]);
+//			prepopulate_config(cfg, argc - 3, argv + 3);
+			cvtxml_entry(fn);
 		}
 		else
 		{

@@ -603,7 +603,7 @@ int Unit_Test::denoising(int argc, char **argv)
 {
 #define DENOISING_FLOAT_TYPE double
 
-	string img_names("Test-Data/coastguard144.avi");
+	string img_names("Test-Data/coastguard144.xml");
 
 	int ret = 0;
 	Media_Format mfmt;
@@ -651,7 +651,7 @@ int Unit_Test::denoising(int argc, char **argv)
 //	thr_param.thr_method = "bishrink";
 
 	Thresholding_Param thr_param;
-	ret = compose_thr_param(mean, stdev, 1, 7, true, "bishrink", thr_param);
+	ret = compose_thr_param(mean, stdev, 1, 7, true, "localsoft", thr_param);
 	if (ret)
 	{
 		cout << "Error in Thr param. " << endl;

@@ -1508,17 +1508,29 @@ int load_as_tensor(const string &filename, Mat_<Vec<_Tp, 2> > &output, Media_For
 		return 0;
 	}
 
+	if (suffix == ".xml")
+	{
+		FileStorage fs(filename, FileStorage::READ);
+		fs["matrix"] >> output;
+		fs.release();
+	}
+
 	return -4;
 }
 
 template<typename _Tp>
 int save_as_media(const string &filename, const Mat_<Vec<_Tp, 2> > &mat, const Media_Format *media_file_fmt)
 {
+	size_t pos = filename.find_last_of('.');
+	if (pos == std::string::npos)
+	{
+		return -1;
+	}
+
+	string suffix = filename.substr(pos);
+
     if (mat.dims == 2 && mat.size[0] != 1)
     {
-//    	Mat_<Vec<_Tp, 2> > img_r(mat.size(), CV_64FC1);
-//    	Mat_<Vec<_Tp, 2> > img_i(mat.size(), CV_64FC1);
-//	    Mat_<Vec<_Tp, 1> > img_abs(mat.size());
     	Mat img_abs(mat.size(), CV_64FC1);
 
 		 for (int i = 0; i < mat.rows; i++)
@@ -1531,14 +1543,13 @@ int save_as_media(const string &filename, const Mat_<Vec<_Tp, 2> > &mat, const M
 				//TODO sqrt is not good practice for template programming.
 				//TODO BIG Problem. The two statement below produce different pictures.
 				img_abs.at<double>(i, j) = (double)sqrt(d);
-	//         		img_abs.at<double>(i, j) = mat(i,j)[0];
 			}
 
 		 }
 
-         Mat scaled;
-         double d0, d1;
-         minMaxLoc(img_abs, &d0, &d1);
+//         Mat scaled;
+//         double d0, d1;
+//         minMaxLoc(img_abs, &d0, &d1);
 //         img_abs.convertTo(scaled, CV_8UC1, 255.0 / (d1 - d0), -255.0 / (d1 - d0));
 //         img_abs.convertTo(scaled, CV_8UC1, 1, 0);
 //         imwrite(filename, scaled);
@@ -1551,6 +1562,15 @@ int save_as_media(const string &filename, const Mat_<Vec<_Tp, 2> > &mat, const M
          imwrite(filename, img_abs);
 
          return 0;
+    }
+
+    if (suffix == ".xml")
+    {
+    	FileStorage fs(filename, FileStorage::WRITE);
+    	fs << "matrix" << mat;
+    	fs.release();
+
+    	return 0;
     }
 
     if (mat.dims == 3)
@@ -1588,6 +1608,8 @@ int save_as_media(const string &filename, const Mat_<Vec<_Tp, 2> > &mat, const M
             frame.convertTo(frame, CV_8UC1, 1, 0);
             writer << frame;
     	}
+
+    	return 0;
     }
 	return 0;
 }
@@ -2011,8 +2033,6 @@ int md_filtering(const Mat_<Vec<_Tp, 2> > &input, const Mat_<Vec<_Tp, 2> > &filt
 		}
 	}
 
-
-	Mat_<Vec<_Tp, 2> > fd_filter, fd_input;
 	normalized_fft<_Tp>(full_filter, full_filter);
 	normalized_fft<_Tp>(input, filtered);
 	pw_mul<_Tp>(filtered, full_filter, filtered);

@@ -391,6 +391,5 @@ int thresholding_denoise(const Mat_<Vec<_Tp, 2> > &noisy_input, const ML_MD_FS_P
 
 int denoise_entry(const Configuration *cfg, const string noisy_file);
 
-int psnr_entry(const string &left, const string &right);
 
 #endif

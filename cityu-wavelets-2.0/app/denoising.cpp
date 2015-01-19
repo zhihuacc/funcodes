@@ -101,21 +101,22 @@ typedef double FLOAT_TYPE;
 	return 0;
 }
 
-int psnr_entry(const string &left, const string &right)
-{
-	typedef double FLOAT_TYPE;
+//int psnr_entry(const string &left, const string &right)
+//{
+//	typedef double FLOAT_TYPE;
+//
+//	Mat_<Vec<FLOAT_TYPE, 2> > left_mat, right_mat;
+//	Media_Format mfmt;
+//	load_as_tensor<FLOAT_TYPE>(left, left_mat, &mfmt);
+//	load_as_tensor<FLOAT_TYPE>(right, right_mat, &mfmt);
+//
+//	double score, msr;
+//	psnr<FLOAT_TYPE>(left_mat, right_mat, score, msr);
+//
+//	cout << "PSNR: " << score << ", MSR: " << msr << endl;
+//
+//	return 0;
+//}
 
-	Mat_<Vec<FLOAT_TYPE, 2> > left_mat, right_mat;
-	Media_Format mfmt;
-	load_as_tensor<FLOAT_TYPE>(left, left_mat, &mfmt);
-	load_as_tensor<FLOAT_TYPE>(right, right_mat, &mfmt);
-
-	double score, msr;
-	psnr<FLOAT_TYPE>(left_mat, right_mat, score, msr);
-
-	cout << "PSNR: " << score << ", MSR: " << msr << endl;
-
-	return 0;
-}
 
 
