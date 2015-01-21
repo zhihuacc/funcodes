@@ -13,10 +13,10 @@ int cmd_config_parse(int argc, char **argv);
 
 int main(int argc, char **argv)
 {
-//	setlocale(LC_ALL, "");
-//	cmd_config_parse(argc, argv);
-//
-//	return 0;
+	setlocale(LC_ALL, "");
+	cmd_config_parse(argc, argv);
+
+	return 0;
 
 	Unit_Test unit_test;
 //	unit_test.psnr_test(argc, argv);
@@ -166,6 +166,11 @@ int cmd_config_parse(int argc, char **argv)
 			string fn(argv[2]);
 //			prepopulate_config(cfg, argc - 3, argv + 3);
 			cvtxml_entry(fn);
+		}
+		else if (sub_cmd == "denodemo")
+		{
+			string fn(argv[2]);
+			denoising_demo(fn);
 		}
 		else
 		{

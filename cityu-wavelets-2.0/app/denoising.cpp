@@ -101,22 +101,71 @@ typedef double FLOAT_TYPE;
 	return 0;
 }
 
-//int psnr_entry(const string &left, const string &right)
-//{
-//	typedef double FLOAT_TYPE;
-//
-//	Mat_<Vec<FLOAT_TYPE, 2> > left_mat, right_mat;
-//	Media_Format mfmt;
-//	load_as_tensor<FLOAT_TYPE>(left, left_mat, &mfmt);
-//	load_as_tensor<FLOAT_TYPE>(right, right_mat, &mfmt);
-//
-//	double score, msr;
-//	psnr<FLOAT_TYPE>(left_mat, right_mat, score, msr);
-//
-//	cout << "PSNR: " << score << ", MSR: " << msr << endl;
-//
-//	return 0;
-//}
+int denoising_demo(const string &fn)
+{
+typedef double FLOAT_TYPE;
+	int ret = 0;
+	Media_Format mfmt;
+	Mat_<Vec<FLOAT_TYPE, 2> > input, noisy_input, denoised_output;
+	load_as_tensor<FLOAT_TYPE>(fn, input, &mfmt);
+	int ndims = input.dims;
 
+	//-- Fake up noisy data.
+	double mean = 0;
+	double stdev = 5;
+	Mat_<Vec<FLOAT_TYPE, 1> > channels[2];
+	channels[0] = Mat_<Vec<FLOAT_TYPE, 1> >(input.dims, input.size);
+	channels[1] = Mat_<Vec<FLOAT_TYPE, 1> >(input.dims, input.size, Vec<FLOAT_TYPE, 1>((FLOAT_TYPE)0));
+	randn(channels[0], mean, stdev);
+	merge(channels, 2, noisy_input);
+	channels[0].release();
+	channels[1].release();
+	noisy_input = input + noisy_input;
+//	noisy_input = input;
+	// --
+
+	double score, msr;
+	psnr<FLOAT_TYPE>(input, noisy_input, score, msr);
+	cout << "Noisy Input PSNR score: " << score << ", msr: " << msr << endl << endl;
+
+	// -- Prepare parameters;
+	int nlevels = 2;
+	string fs_param_opt = "CTF3";
+	int ext_size = 12;
+	string ext_opt = "mir1001";
+	ML_MD_FS_Param ml_md_fs_param;
+	ret = compose_fs_param(nlevels, ndims, fs_param_opt, ext_size, ext_opt, true, ml_md_fs_param);
+	if (ret)
+	{
+		cout << "Error in FS param. " << endl;
+		return 0;
+	}
+
+//	Thresholding_Param thr_param;
+//	thr_param.c = 1;
+//	thr_param.mean = mean;
+//	thr_param.stdev = stdev;
+//	thr_param.doNormalization = true;
+//	thr_param.wwidth = 7;        //Should be odd.
+//	thr_param.thr_method = "bishrink";
+
+	Thresholding_Param thr_param;
+	ret = compose_thr_param(mean, stdev, 1, 7, true, "localsoft", thr_param);
+	if (ret)
+	{
+		cout << "Error in Thr param. " << endl;
+		return 0;
+	}
+	// --
+
+	thresholding_denoise<FLOAT_TYPE>(noisy_input, ml_md_fs_param, thr_param, denoised_output);
+	noisy_input.release();
+
+
+	psnr<FLOAT_TYPE>(input, denoised_output, score, msr);
+	cout << "Denoised PSNR score: " << score << ", msr: " << msr << endl;
+
+	return 0;
+}
 
 
