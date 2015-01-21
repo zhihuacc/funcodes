@@ -112,7 +112,7 @@ typedef double FLOAT_TYPE;
 
 	//-- Fake up noisy data.
 	double mean = 0;
-	double stdev = 5;
+	double stdev = 15;
 	Mat_<Vec<FLOAT_TYPE, 1> > channels[2];
 	channels[0] = Mat_<Vec<FLOAT_TYPE, 1> >(input.dims, input.size);
 	channels[1] = Mat_<Vec<FLOAT_TYPE, 1> >(input.dims, input.size, Vec<FLOAT_TYPE, 1>((FLOAT_TYPE)0));
@@ -141,16 +141,9 @@ typedef double FLOAT_TYPE;
 		return 0;
 	}
 
-//	Thresholding_Param thr_param;
-//	thr_param.c = 1;
-//	thr_param.mean = mean;
-//	thr_param.stdev = stdev;
-//	thr_param.doNormalization = true;
-//	thr_param.wwidth = 7;        //Should be odd.
-//	thr_param.thr_method = "bishrink";
 
 	Thresholding_Param thr_param;
-	ret = compose_thr_param(mean, stdev, 1, 7, true, "localsoft", thr_param);
+	ret = compose_thr_param(mean, stdev, 1, 7, true, "bishrink", thr_param);
 	if (ret)
 	{
 		cout << "Error in Thr param. " << endl;

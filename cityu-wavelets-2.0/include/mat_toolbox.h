@@ -344,6 +344,60 @@ int pw_mul(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat_
 }
 
 template<typename _Tp>
+int pw_mul_crc(const Mat_<Vec<_Tp, 2> > &left, const Mat_<_Tp> &right, Mat_<Vec<_Tp, 2> > &product, const Mat_<_Tp> &mask)
+{
+    // Need more check if that left and right match
+//    if (!isGoodMat(left) || !isGoodMat(right) || !sameSize(left, right) || !sameSize(right, mask))
+//    {
+//    	return -1;
+//    }
+
+//    Mat_<Vec<_Tp, 2> > product_mat(left.dims, left.size, Vec<_Tp, 2>(0,0));
+    product.create(left.dims, left.size);
+    int N = left.total();
+    complex<_Tp> *pleft = reinterpret_cast<complex<_Tp> *>(left.data),
+    		     *pprod  = reinterpret_cast<complex<_Tp> *>(product.data);
+    		_Tp *pright = reinterpret_cast<_Tp *>(right.data),
+    		     *pm = reinterpret_cast<_Tp *>(mask.data);
+    for (int i = 0; i < N; ++i, ++pleft, ++pright, ++pprod, ++pm)
+    {
+    	if (*pm > 0)
+    	{
+    		*pprod = (*pleft) * (*pright);
+    	}
+    	else
+    	{
+    		*pprod = complex<_Tp>(0,0);
+    	}
+    }
+
+    return 0;
+}
+
+template<typename _Tp>
+int pw_mul_crc(const Mat_<Vec<_Tp, 2> > &left, const Mat_<_Tp> &right, Mat_<Vec<_Tp, 2> > &product)
+{
+    // Need more check if that left and right match
+//    if (!isGoodMat(left) || !isGoodMat(right) || !sameSize(left, right) || !sameSize(right, mask))
+//    {
+//    	return -1;
+//    }
+
+//    Mat_<Vec<_Tp, 2> > product_mat(left.dims, left.size, Vec<_Tp, 2>(0,0));
+    product.create(left.dims, left.size);
+    int N = left.total();
+    complex<_Tp> *pleft = reinterpret_cast<complex<_Tp> *>(left.data),
+    		     *pprod  = reinterpret_cast<complex<_Tp> *>(product.data);
+    		_Tp *pright = reinterpret_cast<_Tp *>(right.data);
+    for (int i = 0; i < N; ++i, ++pleft, ++pright, ++pprod)
+    {
+    	*pprod = (*pleft) * (*pright);
+    }
+
+    return 0;
+}
+
+template<typename _Tp>
 int pw_mul(const Mat_<Vec<_Tp, 2> > &left, const complex<_Tp> alpha, Mat_<Vec<_Tp, 2> > &product)
 {
     // Need more check if that left and right match
@@ -705,6 +759,48 @@ int pw_less(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat
 	return 0;
 }
 
+//template<typename _Tp>
+//int pw_less_ccr(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat_<_Tp> &res)
+//{
+//    if (!isGoodMat(left) || !isGoodMat(right) || !sameSize(left, right))
+//    {
+//    	return -1;
+//    }
+//
+//    res.create(left.dims, left.size);
+//    int N = left.total();
+//    complex<_Tp> *pleft = reinterpret_cast<complex<_Tp> *>(left.data),
+//    		     *pright = reinterpret_cast<complex<_Tp> *>(right.data);
+//    		 _Tp *pres  = reinterpret_cast<_Tp *>(res.data);
+//    for (int i = 0; i < N; ++i, ++pleft, ++pright, ++pres)
+//    {
+//    	*pres = (*pleft).real() < (*pright).real();
+//    }
+//
+//	return 0;
+//}
+
+template<typename _Tp>
+int pw_less_rrr(const Mat_<_Tp> &left, const Mat_<_Tp> &right, Mat_<_Tp> &res)
+{
+//    if (!isGoodMat(left) || !isGoodMat(right) || !sameSize(left, right))
+//    {
+//    	return -1;
+//    }
+
+    res.create(left.dims, left.size);
+    int N = left.total();
+    _Tp *pleft = reinterpret_cast<_Tp *>(left.data),
+        *pright = reinterpret_cast<_Tp *>(right.data),
+    	*pres  = reinterpret_cast<_Tp *>(res.data);
+    for (int i = 0; i < N; ++i, ++pleft, ++pright, ++pres)
+    {
+    	*pres = *pleft < *pright;
+    }
+
+	return 0;
+}
+
 template<typename _Tp>
 int pw_less(const Mat_<Vec<_Tp, 2> > &left, const complex<_Tp> &alpha, Mat_<Vec<_Tp, 2> > &res)
 {
@@ -864,6 +960,27 @@ int pw_l2square(const Mat_<Vec<_Tp, 2> > &mat, Mat_<Vec<_Tp, 2> > &res)
     	(*pres).imag(0);
     }
 //    res = res_mat;
+
+	return 0;
+}
+
+template<typename _Tp>
+int pw_l2square_cr(const Mat_<Vec<_Tp, 2> > &mat, Mat_<_Tp> &res)
+{
+	if (!isGoodMat(mat))
+	{
+		return -1;
+	}
+
+	res.create(mat.dims, mat.size);
+    int N = mat.total();
+    complex<_Tp> *pbase = reinterpret_cast<complex<_Tp> *>(mat.data);
+    		 _Tp *pres  = reinterpret_cast<_Tp *>(res.data);
+    for (int i = 0; i < N; ++i, ++pbase, ++pres)
+    {
+    	_Tp real = (*pbase).real(), imag = (*pbase).imag();
+    	*pres = real * real + imag * imag;
+    }
 
 	return 0;
 }
@@ -2235,6 +2352,95 @@ int conj(Mat_<Vec<_Tp, 2> > &mat)
 		(*pa)[1] = -(*pa)[1];
 	}
 
+	return 0;
+}
+
+template <typename _Tp>
+int separable_conv(Mat_<_Tp> &mat, const SmartArray<Mat_<_Tp> > &skerns)
+{
+	int ndims = mat.dims;
+	Mat_<_Tp> src, dst;
+
+	src = mat;
+	dst.create(src.dims, src.size);
+	for (int d = 0; d < ndims; ++d)
+	{
+		SmartIntArray start_pos(ndims);
+		SmartIntArray cur_pos(ndims);
+		SmartIntArray step(ndims, 1);
+		SmartIntArray range(ndims, mat.size);
+		step[d] = range[d];
+		{
+			int src_dims;
+			SmartIntArray src_start_pos;
+			SmartIntArray src_cur_pos;
+			SmartIntArray src_step;
+			SmartIntArray src_end_pos;
+
+			//User-Defined initialization
+			src_dims = ndims;
+			src_start_pos = start_pos;
+			src_cur_pos = cur_pos;
+			src_step = step;
+			src_end_pos = range;
+			//--
+
+			int cur_dim = src_dims - 1;
+			while(true)
+			{
+				while (cur_dim >= 0 && src_cur_pos[cur_dim] >= src_end_pos[cur_dim])
+				{
+					src_cur_pos[cur_dim] = src_start_pos[cur_dim];
+					--cur_dim;
+					if (cur_dim >= 0)
+					{
+						src_cur_pos[cur_dim] += src_step[cur_dim];
+						continue;
+					}
+				}
+				if (cur_dim < 0)
+				{
+					break;
+				}
+
+				//User-Defined actions
+				int N = src.size[d];
+				const Mat_<_Tp> &kern = skerns[d];
+				int M = kern.size[1];
+				SmartIntArray this_dim_pos = src_cur_pos.clone();
+				int center = M / 2;
+				for (int i = 0; i < N; ++i)
+				{
+					_Tp sum = 0;
+					for (int j = 0; j < M; ++j)
+					{
+						int idx = i + center -j;
+						if (idx < 0)
+						{
+							idx += range[d];
+						}
+						else if (idx >= range[d])
+						{
+							idx -= range[d];
+						}
+						this_dim_pos[d] = idx;
+						sum += (kern.template at<_Tp>(j) * src.template at<_Tp>(this_dim_pos));
+					}
+					this_dim_pos[d] = i;
+					dst.template at<_Tp>(this_dim_pos) = sum;
+				}
+				//--
+
+				cur_dim = src_dims - 1;
+				src_cur_pos[cur_dim] += src_step[cur_dim];
+			}
+		}
+
+		Mat_<_Tp> tmp = src;
+		src = dst;
+		dst = tmp;
+	}
+	mat = src;
 	return 0;
 }
 
