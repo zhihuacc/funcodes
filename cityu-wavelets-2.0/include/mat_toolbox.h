@@ -15,32 +15,36 @@
 
 using namespace cv;
 
-template<typename _Tp>
-inline bool isGoodMat(const Mat_<Vec<_Tp, 2> > &domain)
-{
-	if (domain.empty() || !domain.isContinuous()
-		|| (domain.depth() != CV_64F && domain.depth() != CV_32F) || domain.channels() != 2)
-	{
-		cout << "Failed in isGoodMat " << endl;
-//		CV_ERROR(CV_StsInternal, "Test of isGoodMat failed.");
-		return false;
-	}
+//template<typename _Tp>
+//inline bool isGoodMat(const Mat_<Vec<_Tp, 2> > &domain);
+//{
+//	if (domain.empty() || !domain.isContinuous()
+//		|| (domain.depth() != CV_64F && domain.depth() != CV_32F) || domain.channels() != 2)
+//	{
+//		cout << "Failed in isGoodMat " << endl;
+////		CV_ERROR(CV_StsInternal, "Test of isGoodMat failed.");
+//		return false;
+//	}
+//
+//	return true;
+//}
 
-	return true;
-}
+//template<typename _Tp>
+//inline bool sameSize(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right);
+//{
+//	SmartIntArray sl(left.dims, left.size), sr(right.dims, right.size);
+//	bool ret = sl == sr;
+//	if (ret == false)
+//	{
+//		cout << "Failed in sameSize " << endl;
+//	}
+//
+//	return ret;
+//}
 
-template<typename _Tp>
-inline bool sameSize(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right)
-{
-	SmartIntArray sl(left.dims, left.size), sr(right.dims, right.size);
-	bool ret = sl == sr;
-	if (ret == false)
-	{
-		cout << "Failed in sameSize " << endl;
-	}
-
-	return ret;
-}
+bool sameSize(const Mat &left, const Mat &right);
+bool isGoodMat(const Mat &domain);
+double mat_error(const Mat &left, const Mat &right, const Mat &mask);
 
 
 /*
@@ -2444,5 +2448,6 @@ int separable_conv(Mat_<_Tp> &mat, const SmartArray<Mat_<_Tp> > &skerns)
 	return 0;
 }
 
+double mat_error(const Mat &left, const Mat &right);
 
 #endif

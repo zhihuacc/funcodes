@@ -172,6 +172,13 @@ int cmd_config_parse(int argc, char **argv)
 			string fn(argv[2]);
 			denoising_demo(fn);
 		}
+		else if (sub_cmd == "inpaint")
+		{
+			string img_name(argv[2]);
+			string mask_name(argv[3]);
+			inpaint(cfg, img_name, mask_name);
+
+		}
 		else
 		{
 			cout << "Sub-command unrecognized!" << endl;
