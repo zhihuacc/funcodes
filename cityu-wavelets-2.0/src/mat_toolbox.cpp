@@ -24,12 +24,27 @@ bool isGoodMat(const Mat &domain)
 	return true;
 }
 
-double mat_error(const Mat &left, const Mat &right, const Mat &mask)
+//double mat_error(const Mat &left, const Mat &right, const Mat &mask)
+//{
+//	Mat diff = left - right;
+//
+//	multiply(diff, mask, diff);
+//	double err = norm(diff, NORM_L2);
+////	err /= diff.total();
+//	return err;
+//}
+int log10space(double left, double right, int n, vector<double> &points)
 {
-	Mat diff = left - right;
-
-	multiply(diff, mask, diff);
-	double err = norm(diff, NORM_L2);
-	err /= diff.total();
-	return err;
+	if (n < 2)
+	{
+		return -1;
+	}
+	double interval = (right - left) / (n - 1);
+	points.reserve(n);
+	points.resize(n);
+	for (int i = 0; i < n; ++i)
+	{
+		points[i] = pow(10, left + i * interval);
+	}
+	return 0;
 }

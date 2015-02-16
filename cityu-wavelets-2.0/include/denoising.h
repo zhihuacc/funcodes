@@ -36,13 +36,20 @@ int normalize_coefs(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, const 
 		const typename MC_Filter_Norms_Set<_Tp>::type &this_level_norms_set = norms_set[i];
 		for (int j = 0; j < n; ++j)
 		{
-			if (forward)
+			if ((i == levels - 1) && j == (n - 1))
 			{
-				new_coefs_set[i][j] = coefs_set[i][j] / this_level_norms_set[j];
+				new_coefs_set[i][j] = coefs_set[i][j];
 			}
 			else
 			{
-				new_coefs_set[i][j] = coefs_set[i][j] * this_level_norms_set[j];
+				if (forward)
+				{
+					new_coefs_set[i][j] = coefs_set[i][j] / this_level_norms_set[j];
+				}
+				else
+				{
+					new_coefs_set[i][j] = coefs_set[i][j] * this_level_norms_set[j];
+				}
 			}
 		}
 	}
@@ -52,78 +59,12 @@ int normalize_coefs(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, const 
 	return 0;
 }
 
-template<typename _Tp>
-int bishrink(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, double c, double sigma, typename ML_MC_Coefs_Set<_Tp>::type &thr_set)
-{
-	int nd = coefs_set[0][0].dims;
-	int nlevels = coefs_set.size();
-	SmartIntArray winsize(nd, wwidth);
-	Mat_<Vec<_Tp, 2> > avg_window(nd, winsize, Vec<_Tp, 2>(1.0 / pow(wwidth, nd),0));
-
-	typename ML_MC_Coefs_Set<_Tp>::type new_coefs_set;
-	new_coefs_set.reserve(coefs_set.size());
-	new_coefs_set.resize(coefs_set.size());
-	SmartIntArray anchor(nd, wwidth / 2);
-	for (int cur_lvl = 0; cur_lvl < nlevels - 1; ++cur_lvl)
-	{
-		const typename MC_Coefs_Set<_Tp>::type &this_level_set = coefs_set[cur_lvl];
-		const typename MC_Coefs_Set<_Tp>::type &lower_level_set = coefs_set[cur_lvl + 1];
-		new_coefs_set[cur_lvl].reserve(this_level_set.size());
-		new_coefs_set[cur_lvl].resize(this_level_set.size());
-		for (int idx = 0; idx < (int)this_level_set.size(); ++idx)
-		{
-			const Mat_<Vec<_Tp, 2> > Y = this_level_set[idx];
-			Mat_<Vec<_Tp, 2> > Y_par;
-			Mat_<Vec<_Tp, 2> > Y_abs, Y_par_abs;
-			Mat_<Vec<_Tp, 2> > T;
-			Mat_<Vec<_Tp, 2> > T_abs;
-			Mat_<Vec<_Tp, 2> > R, Y2;
-			complex<_Tp> infinitesimal(1e-16,0);
-			pw_l2square<_Tp>(Y, Y2);
-			T = Y2.clone();
-
-			md_filtering<_Tp>(T, avg_window, anchor, T);
-			T -= Scalar(sigma * sigma, 0);
-			pw_max<_Tp>(T, infinitesimal, T);
-			pw_sqrt<_Tp, 2>(T, T, 0);
-			pw_div<_Tp, 2>(Vec<_Tp, 2>(c*sigma*sigma, 0), T, T, 0);
-			// T is ready and real matrix
-
-			Y_par = lower_level_set[idx].clone();
-			SmartIntArray times(Y.dims);
-			for (int i = 0; i < Y.dims; ++i)
-			{
-				times[i] = Y.size[i] / Y_par.size[i];
-			}
-			interpolate<_Tp>(Y_par, times, Y_par);
-			pw_l2square<_Tp>(Y_par, Y_par);
-			pw_sqrt<_Tp, 2>(Y2 + Y_par, R, 0);
-			R -= T;
-
-			Mat_<Vec<_Tp, 2> > ratio;
-			pw_max<_Tp>(R, complex<_Tp>(0,0), R);  // This equals R * (R > 0)
-			// R is ready
-
-//			Mat_<Vec<_Tp, 2> > r_t = R + T;
-			T += R;
-			pw_max<_Tp>(T, infinitesimal, T);
-			pw_div<_Tp, 2>(R, T, T, 0);
-
-			pw_mul<_Tp>(Y, T, T);
-			new_coefs_set[cur_lvl][idx] = T;
-		}
-	}
-	new_coefs_set[nlevels - 1] = coefs_set[nlevels - 1];
-	thr_set = new_coefs_set;
-
-	return 0;
-}
 
 template<typename _Tp>
 int bishrink2(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, double c, double sigma, typename ML_MC_Coefs_Set<_Tp>::type &thr_set)
 {
 	int nd = coefs_set[0][0].dims;
-	int nlevels = coefs_set.size();
+	int nlevels = static_cast<int>( coefs_set.size() );
 	SmartIntArray winsize(nd, wwidth);
 	Mat_<Vec<_Tp, 2> > avg_window(nd, winsize, Vec<_Tp, 2>(1.0 / pow(wwidth, nd),0));
 
@@ -145,7 +86,8 @@ int bishrink2(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, 
 			const Mat_<Vec<_Tp, 2> > Y = this_level_set[idx];
 			Mat_<Vec<_Tp, 2> > Y_par;
 			Mat_<_Tp> Y2, Y_par2, T, R;
-			_Tp inf = 1e-16;
+//			_Tp inf = numeric_limits<_Tp>::epsilon();
+			_Tp inf = 2.220446049250313e-16;
 			pw_l2square_cr<_Tp>(Y, Y2);
 			T = Y2.clone();
 
@@ -183,130 +125,12 @@ int bishrink2(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, 
 	return 0;
 }
 
-//template<typename _Tp>
-//int local_soft(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, double c, double sigma, typename ML_MC_Coefs_Set<_Tp>::type &thr_set)
-//{
-//	int nd = coefs_set[0][0].dims;
-//	SmartIntArray winsize(nd, wwidth);
-//	Mat_<Vec<_Tp, 2> > avg_window(nd, winsize, Vec<_Tp, 2>(1.0 / pow(wwidth, nd),0));
-//
-//	typename ML_MC_Coefs_Set<_Tp>::type new_coefs_set;
-//	new_coefs_set.reserve(coefs_set.size());
-//	new_coefs_set.resize(coefs_set.size());
-//	SmartIntArray anchor(nd, wwidth / 2);
-//	for (int cur_lvl = 0; cur_lvl < (int)coefs_set.size(); ++cur_lvl)
-//	{
-//		const typename MC_Coefs_Set<_Tp>::type &this_level_set = coefs_set[cur_lvl];
-//		new_coefs_set[cur_lvl].reserve(this_level_set.size());
-//		new_coefs_set[cur_lvl].resize(this_level_set.size());
-//		for (int idx = 0; idx < (int)this_level_set.size(); ++idx)
-//		{
-//			const Mat_<Vec<_Tp, 2> > Y = this_level_set[idx];
-//			Mat_<Vec<_Tp, 2> > Y_abs;
-//			Mat_<Vec<_Tp, 2> > T;
-//			Mat_<Vec<_Tp, 2> > T_abs;
-//			complex<_Tp> infinitesimal(1e-16, 0);
-//
-////			pw_l2square<_Tp>(Y, T);
-////			pw_sqrt<_Tp>(T, Y_abs);
-//			pw_abs<_Tp>(Y, Y_abs);
-//			pw_pow<_Tp>(Y_abs, static_cast<_Tp>(2), T);
-////			pw_l2square<_Tp>(Y, T);
-//
-//			SmartIntArray border(nd, wwidth - 1);
-////			mat_border_extension<_Tp>(T, border, "blk", T);
-//			md_filtering<_Tp>(T, avg_window, anchor, T);
-////			mat_border_extension<_Tp>(T, border, "cut", T);
-//
-//			T -= Scalar(sigma * sigma, 0);
-//			pw_max<_Tp>(T, infinitesimal, T);
-//			pw_sqrt<_Tp>(T, T);
-//			pw_div<_Tp>(complex<_Tp>(c*sigma*sigma, 0), T, T);
-//			// T is ready and real matrix
-//
-//
-//			Mat_<Vec<_Tp, 2> > mask;
-//			pw_less<_Tp>(T, Y_abs, mask);
-//
-//			pw_max<_Tp>(Y_abs, infinitesimal, Y_abs);
-//			Mat_<Vec<_Tp, 2> > ratio;
-//			pw_div<_Tp>(T, Y_abs, ratio);
-//
-//			T.release();
-//
-//			ratio = Scalar(1.0,0) - ratio;
-//			// ratio is ready
-//
-//			Mat_<Vec<_Tp, 2> > new_Y;
-////			pw_mul<_Tp>(Y, ratio, new_Y);
-////			pw_mul<_Tp>(mask, new_Y, new_Y);
-//			pw_mul<_Tp>(Y, ratio, new_Y, mask);
-//
-//			new_coefs_set[cur_lvl][idx] = new_Y;
-//		}
-//	}
-//
-//	thr_set = new_coefs_set;
-//	return 0;
-//}
 
-template<typename _Tp>
-int local_soft(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, double c, double sigma, typename ML_MC_Coefs_Set<_Tp>::type &thr_set)
-{
-	int nd = coefs_set[0][0].dims;
-	SmartIntArray winsize(nd, wwidth);
-	Mat_<Vec<_Tp, 2> > avg_window(nd, winsize, Vec<_Tp, 2>(1.0 / pow(wwidth, nd),0));
-
-	typename ML_MC_Coefs_Set<_Tp>::type new_coefs_set;
-	new_coefs_set.reserve(coefs_set.size());
-	new_coefs_set.resize(coefs_set.size());
-	SmartIntArray anchor(nd, wwidth / 2);
-	for (int cur_lvl = 0; cur_lvl < (int)coefs_set.size(); ++cur_lvl)
-	{
-		const typename MC_Coefs_Set<_Tp>::type &this_level_set = coefs_set[cur_lvl];
-		new_coefs_set[cur_lvl].reserve(this_level_set.size());
-		new_coefs_set[cur_lvl].resize(this_level_set.size());
-		for (int idx = 0; idx < (int)this_level_set.size(); ++idx)
-		{
-			const Mat_<Vec<_Tp, 2> > Y = this_level_set[idx];
-			Mat_<Vec<_Tp, 2> > Y_abs;
-			Mat_<Vec<_Tp, 2> > T;
-			Mat_<Vec<_Tp, 2> > T_abs;
-			complex<_Tp> infinitesimal(1e-16, 0);
-
-			pw_l2square<_Tp>(Y, T);
-			pw_sqrt<_Tp, 2>(T, Y_abs, 0);
-
-			md_filtering<_Tp>(T, avg_window, anchor, T);
-
-			T -= Scalar(sigma * sigma, 0);
-			pw_max<_Tp>(T, infinitesimal, T);
-			pw_sqrt<_Tp, 2>(T, T, 0);
-			pw_div<_Tp, 2>(Vec<_Tp, 2>(c*sigma*sigma, 0), T, T, 0);
-			// T is ready
-
-			Mat_<Vec<_Tp, 2> > mask;
-			pw_less<_Tp>(T, Y_abs, mask);
-
-			pw_max<_Tp>(Y_abs, infinitesimal, Y_abs);
-			pw_div<_Tp, 2>(T, Y_abs, T, 0);
-
-			T = Scalar(1.0,0) - T;
-			// T is ratio and ratio is ready
-
-			pw_mul<_Tp>(Y, T, T, mask);
-
-			new_coefs_set[cur_lvl][idx] = T;
-		}
-	}
-
-	thr_set = new_coefs_set;
-	return 0;
-}
 
 template<typename _Tp>
 int local_soft2(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, double c, double sigma, typename ML_MC_Coefs_Set<_Tp>::type &thr_set)
 {
+	int nlevels = static_cast<int>( coefs_set.size() );
 	int nd = coefs_set[0][0].dims;
 	SmartIntArray winsize(nd, wwidth);
 	Mat_<Vec<_Tp, 2> > avg_window(nd, winsize, Vec<_Tp, 2>(1.0 / pow(wwidth, nd),0));
@@ -318,18 +142,25 @@ int local_soft2(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth
 	typename ML_MC_Coefs_Set<_Tp>::type new_coefs_set;
 	new_coefs_set.reserve(coefs_set.size());
 	new_coefs_set.resize(coefs_set.size());
-	for (int cur_lvl = 0; cur_lvl < (int)coefs_set.size(); ++cur_lvl)
+	for (int cur_lvl = 0; cur_lvl < nlevels; ++cur_lvl)
 	{
 		const typename MC_Coefs_Set<_Tp>::type &this_level_set = coefs_set[cur_lvl];
 		new_coefs_set[cur_lvl].reserve(this_level_set.size());
 		new_coefs_set[cur_lvl].resize(this_level_set.size());
 		for (int idx = 0; idx < (int)this_level_set.size(); ++idx)
 		{
+			// Keep old lowpass coef unchanged.
+			if (cur_lvl == nlevels - 1 && idx == static_cast<int>(this_level_set.size() - 1))
+			{
+				new_coefs_set[cur_lvl][idx] = coefs_set[cur_lvl][idx];
+				continue;
+			}
 			const Mat_<Vec<_Tp, 2> > Y = this_level_set[idx];
 			Mat_<_Tp> Y_abs, T, T_abs;
-			_Tp inf = 1e-16;
+			_Tp inf = 2.220446049250313e-16;
+//			_Tp inf = numeric_limits<_Tp>::epsilon();
 
-			pw_l2square_cr<_Tp>(Y, T);
+			pw_l2square_cr<_Tp>(Y, T);   // T is single channel.
 			sqrt(T, Y_abs);
 
 			separable_conv<_Tp>(T, skerns);
@@ -342,6 +173,7 @@ int local_soft2(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth
 			pw_less_rrr(T, Y_abs, mask);
 
 			T = 1.0 - T / max(Y_abs, inf);
+//			T = 1.0 - T / Y_abs;
 			// T is ratio and ratio is ready
 
 			pw_mul_crc<_Tp>(Y, T, new_coefs_set[cur_lvl][idx], mask);
@@ -353,65 +185,11 @@ int local_soft2(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth
 }
 
 
-template<typename _Tp>
-int local_adapt(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, double c, double sigma, typename ML_MC_Coefs_Set<_Tp>::type &thr_set)
-{
-	int nd = coefs_set[0][0].dims;
-	SmartIntArray winsize(nd, wwidth);
-	Mat_<Vec<_Tp, 2> > avg_window(nd, winsize, Vec<_Tp, 2>(1.0 / pow(wwidth, nd),0));
-
-	typename ML_MC_Coefs_Set<_Tp>::type new_coefs_set;
-	new_coefs_set.reserve(coefs_set.size());
-	new_coefs_set.resize(coefs_set.size());
-	SmartIntArray anchor(nd, wwidth / 2);
-	for (int cur_lvl = 0; cur_lvl < (int)coefs_set.size(); ++cur_lvl)
-	{
-		const typename MC_Coefs_Set<_Tp>::type &this_level_set = coefs_set[cur_lvl];
-		new_coefs_set[cur_lvl].reserve(this_level_set.size());
-		new_coefs_set[cur_lvl].resize(this_level_set.size());
-		for (int idx = 0; idx < (int)this_level_set.size(); ++idx)
-		{
-			Mat_<Vec<_Tp, 2> > Y = this_level_set[idx];
-			Mat_<Vec<_Tp, 2> > Y_abs;
-			Mat_<Vec<_Tp, 2> > T;
-			Mat_<Vec<_Tp, 2> > T_abs;
-			complex<_Tp> infinitesimal(1e-16, 0);
-			pw_abs<_Tp>(Y, Y_abs);
-
-			md_filtering<_Tp>(Y_abs, avg_window, anchor, T);
-
-			pw_pow<_Tp, 2>(T, static_cast<_Tp>(2), T, 0);
-
-			T -= Scalar(sigma * sigma, 0);
-			pw_max<_Tp>(T, infinitesimal, T);
-			pw_sqrt<_Tp, 2>(T, T, 0);
-			pw_div<_Tp, 2>(Vec<_Tp, 2>(c*sigma*sigma,0), T, T, 0);
-			// T is ready and real matrix
-
-			Mat_<Vec<_Tp, 2> > mask;
-			pw_less<_Tp>(T, Y_abs, mask);
-
-			pw_max<_Tp>(Y_abs, infinitesimal, Y_abs);
-			pw_div<_Tp, 2>(T, Y_abs, T, 0);
-			// T is ratio
-
-			T = Scalar(1.0,0) - T;
-			// ratio is ready
-
-			Mat_<Vec<_Tp, 2> > new_Y;
-			pw_mul<_Tp>(Y, T, T, mask);
-
-			new_coefs_set[cur_lvl][idx] = T;
-		}
-	}
-
-	thr_set = new_coefs_set;
-	return 0;
-}
 
 template<typename _Tp>
 int local_adapt2(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, double c, double sigma, typename ML_MC_Coefs_Set<_Tp>::type &thr_set)
 {
+	int nlevels = static_cast<int>( coefs_set.size() );
 	int nd = coefs_set[0][0].dims;
 	SmartIntArray winsize(nd, wwidth);
 	Mat_<Vec<_Tp, 2> > avg_window(nd, winsize, Vec<_Tp, 2>(1.0 / pow(wwidth, nd),0));
@@ -423,16 +201,24 @@ int local_adapt2(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidt
 	typename ML_MC_Coefs_Set<_Tp>::type new_coefs_set;
 	new_coefs_set.reserve(coefs_set.size());
 	new_coefs_set.resize(coefs_set.size());
-	for (int cur_lvl = 0; cur_lvl < (int)coefs_set.size(); ++cur_lvl)
+	for (int cur_lvl = 0; cur_lvl < nlevels; ++cur_lvl)
 	{
 		const typename MC_Coefs_Set<_Tp>::type &this_level_set = coefs_set[cur_lvl];
 		new_coefs_set[cur_lvl].reserve(this_level_set.size());
 		new_coefs_set[cur_lvl].resize(this_level_set.size());
 		for (int idx = 0; idx < (int)this_level_set.size(); ++idx)
 		{
+			//keep old lowpass coef unchanged.
+			if (cur_lvl == nlevels - 1 && idx == static_cast<int>(this_level_set.size() - 1))
+			{
+				new_coefs_set[cur_lvl][idx] = coefs_set[cur_lvl][idx];
+				continue;
+			}
+
 			const Mat_<Vec<_Tp, 2> > Y = this_level_set[idx];
 			Mat_<_Tp> Y_abs, T, T_abs;
-			_Tp inf = 1e-16;
+//			_Tp inf = numeric_limits<_Tp>::epsilon();
+			_Tp inf = 2.220446049250313e-16;
 
 			pw_l2square_cr<_Tp>(Y, Y_abs);
 			sqrt(Y_abs, Y_abs);
@@ -452,6 +238,7 @@ int local_adapt2(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidt
 			pw_less_rrr<_Tp>(T, Y_abs, mask);
 
 			T = 1.0 - T / max(Y_abs, inf);
+//			T = 1.0 - T / Y_abs;
 			// T is ratio is ready
 
 			pw_mul_crc<_Tp>(Y, T, new_coefs_set[cur_lvl][idx], mask);
@@ -493,9 +280,10 @@ int thresholding_denoise(const Mat_<Vec<_Tp, 2> > &noisy_input, const ML_MD_FS_P
 	SmartIntArray input_size(ndims, noisy_input.size);
 	SmartIntArray better_ext_border(ndims);
 
+
 	figure_good_mat_size(fs_param, input_size, fs_param.ext_border, better_ext_border);
 
-	cout << endl << "Extension border: " << endl;
+	cout <<"Actual extension border: " << endl;
 	cout << "  ";
 	for (int i = 0; i < ndims; ++i)
 	{
@@ -515,11 +303,11 @@ int thresholding_denoise(const Mat_<Vec<_Tp, 2> > &noisy_input, const ML_MD_FS_P
 	decompose_by_ml_md_filter_bank2<_Tp>(fs_param, ext_input, filter_system, norms_set, coefs_set);
 	clock_t t1 = tic();
 	string msg = show_elapse(t1 - t0);
-	cout << endl << "Dec Time: " << endl << msg << endl;
+//	cout << endl << "Dec Time: " << endl << msg << endl;
 	ext_input.release();
 
 //	cout << "Filter Norms: " << endl;
-//	for (int i = 0; i < nlevels; ++i)
+//	for (int i = 0; i < (int)norms_set.size(); ++i)
 //	{
 //		for (int j = 0; j < (int)norms_set[i].size(); ++j)
 //		{
@@ -540,16 +328,27 @@ int thresholding_denoise(const Mat_<Vec<_Tp, 2> > &noisy_input, const ML_MD_FS_P
 	}
 	t1 = tic();
 	msg = show_elapse(t1 - t0);
-	cout << endl << "Denoising Time: " << endl << msg << endl;
+//	cout << endl << "Denoising Time: " << endl << msg << endl;
+
+//	for (int i = 0; i < new_coefs_set.size(); ++i)
+//	{
+//		for (int j = 0; j < new_coefs_set[i].size(); ++j)
+//		{
+//			stringstream ss;
+//			ss << "Test-Data/output/coef_" << i << "_" << j << ".txt";
+//			print_mat_details_g<_Tp>(new_coefs_set[i][j], 2, ss.str());
+//		}
+//	}
 
 	t0 = tic();
 	reconstruct_by_ml_md_filter_bank2<_Tp>(fs_param, filter_system, new_coefs_set, rec);
 	t1 = tic();
 	msg = show_elapse(t1 - t0);
-	cout << "Rec Time: " << endl << msg << endl;
+//	cout << "Rec Time: " << endl << msg << endl;
 
 	mat_border_extension<_Tp>(rec, better_ext_border, "cut", rec);
 	output = rec;
+//	pw_abs<_Tp>(rec, output);
 
 	return 0;
 }

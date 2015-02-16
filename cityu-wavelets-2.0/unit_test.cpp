@@ -2,6 +2,7 @@
 
 #include "include/wavelets_toolbox.h"
 #include "include/denoising.h"
+#include "include/inpaint.h"
 
 int Unit_Test::decomposition_test(int argc, char **argv)
 {
@@ -686,34 +687,13 @@ int Unit_Test::psnr_test(int argc, char **argv)
 
 int Unit_Test::test_any(int argc, char **argv)
 {
-
-	Media_Format mfmt2;
-	Mat_<Vec<double, 2> > mat2;
-	load_as_tensor<double>("Test-Data/Lena512.png", mat2, &mfmt2);
-
-	int nd = 2;
-	int wwidth = 7;
-	SmartIntArray winsize(nd, wwidth);
-	Mat_<Vec<double, 2> > avg_window(nd, winsize, Vec<double, 2>(1.0 / pow(wwidth, nd),0));
-	SmartIntArray anchor(nd, wwidth / 2);
-	SmartIntArray border(nd, wwidth - 1);
-
-	mat_border_extension<double>(mat2, border, "blk", mat2);
-	md_filtering<double>(mat2, avg_window, anchor, mat2);
-	mat_border_extension<double>(mat2, border, "cut", mat2);
-
-	clock_t t0 = tic();
-	for (int i = 0; i < 10; ++i)
+	vector<double> sigmas;
+	figure_good_sigmas(5, 0.8708, 5, 8, sigmas);
+	for (int i = 0; i < (int)sigmas.size(); ++i)
 	{
-		mat_border_extension<double>(mat2, border, "blk", mat2);
-		md_filtering<double>(mat2, avg_window, anchor, mat2);
-		mat_border_extension<double>(mat2, border, "cut", mat2);
+		cout << sigmas[i] << " ";
 	}
-	clock_t t1 = tic();
-	string msg = show_elapse(t1 - t0);
-	cout << "md_filtering" << endl << msg << endl;
-
-	save_as_media<double>("Test-Data/output/Lena272-168.png", mat2, &mfmt2);
+	cout << endl;
 
 	return 0;
 

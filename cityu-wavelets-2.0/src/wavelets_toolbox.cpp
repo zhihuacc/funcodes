@@ -7,13 +7,41 @@ int figure_good_mat_size(const ML_MD_FS_Param &fs_param, const SmartIntArray &ma
 		return -1;
 	}
 
-	SmartIntArray good_pad(fs_param.ndims, 1);
+//	SmartIntArray good_pad(fs_param.ndims, 2);
+//
+//	for (int i = 0; i < fs_param.nlevels; ++i)
+//	{
+//		for (int j = 0; j < fs_param.ndims; ++j)
+//		{
+//			const OneD_FS_Param &this_dim_param = fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j];
+//			if (this_dim_param.highpass_ds_folds.len <= 0)
+//			{
+//				return -1;
+//			}
+//
+//			int dummy;
+//			int this_dim_lcd = this_dim_param.highpass_ds_folds[0];
+//			for (int k = 0; k < this_dim_param.highpass_ds_folds.len; ++k)
+//			{
+//				hcf_lcd(this_dim_lcd, this_dim_param.highpass_ds_folds[k], dummy, this_dim_lcd);
+//			}
+//
+//			hcf_lcd(this_dim_lcd, this_dim_param.lowpass_ds_fold, dummy, this_dim_lcd);
+//			good_pad[j] *= this_dim_lcd;
+//		}
+//	}
+//
+//	for (int j = 0; j < fs_param.ndims; ++j)
+//	{
+//		good_pad[j] *= 2;
+//	}
 
-	for (int i = 0; i < fs_param.nlevels; ++i)
+	SmartIntArray good_pad(fs_param.ndims, 2);
+	for (int i = 0; i < fs_param.ndims; ++i)
 	{
-		for (int j = 0; j < fs_param.ndims; ++j)
+		for (int j = fs_param.nlevels - 1; j >=0; --j)
 		{
-			const OneD_FS_Param &this_dim_param = fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j];
+			const OneD_FS_Param &this_dim_param = fs_param.md_fs_param_at_level[j].oned_fs_param_at_dim[i];
 			if (this_dim_param.highpass_ds_folds.len <= 0)
 			{
 				return -1;
@@ -26,8 +54,8 @@ int figure_good_mat_size(const ML_MD_FS_Param &fs_param, const SmartIntArray &ma
 				hcf_lcd(this_dim_lcd, this_dim_param.highpass_ds_folds[k], dummy, this_dim_lcd);
 			}
 
-			hcf_lcd(this_dim_lcd, this_dim_param.lowpass_ds_fold * 2, dummy, this_dim_lcd);
-			good_pad[j] *= this_dim_lcd;
+			hcf_lcd(this_dim_lcd, this_dim_param.lowpass_ds_fold * good_pad[i], dummy, this_dim_lcd);
+			good_pad[i] = this_dim_lcd;
 		}
 	}
 
@@ -45,6 +73,12 @@ int figure_good_mat_size(const ML_MD_FS_Param &fs_param, const SmartIntArray &ma
 		}
 		better_border[i] = border[i] + good_pad[i];
 	}
+
+	if (fs_param.ext_method == "none")
+	{
+		better_border = SmartIntArray::konst(fs_param.ndims, 0);
+	}
+
 	better = better_border;
 
 	return 0;
@@ -110,6 +144,24 @@ int compose_fs_param(int nlevels, int ndims, const string &fs_param_opt, int ext
 				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
 				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
 			}
+			else if (fs_param_opt == "CTF4")
+			{
+				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(4, (double[]){-291.0/256.0, 0, 291.0/256.0, M_PI});
+				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(4, (double[]){27.0/64.0, 35.0/128.0, 27.0/64.0, 0.5});
+				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].degree = 1;
+				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].highpass_ds_folds = SmartIntArray(4, (int[]){2,2,2,2});
+				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
+				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
+			}
+			else if (fs_param_opt == "CTF4D4")
+			{
+				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(4, (double[]){-1.15, 0, 1.15, M_PI});
+				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(4, (double[]){0.3, 0.125, 0.3, 0.0778});
+				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].degree = 1;
+				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].highpass_ds_folds = SmartIntArray(4, (int[]){2,4,4,2});
+				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
+				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
+			}
 			else if (fs_param_opt == "CTF6D4")
 			{
 				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(6, (double[]){-2, -1.145796, 0, 1.145796, 2, M_PI});
@@ -119,7 +171,7 @@ int compose_fs_param(int nlevels, int ndims, const string &fs_param_opt, int ext
 				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].lowpass_ds_fold = 2;
 				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].opt = "sincos";
 			}
-			else if (fs_param_opt == "CTF6D2")
+			else if (fs_param_opt == "CTF6")
 			{
 				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].ctrl_points = Smart64FArray(6, (double[]){-(M_PI + 119.0/128.0)/2.0, -119.0/128.0, 0, 119.0/128.0, (M_PI + 119.0/128.0) / 2.0, M_PI});
 				fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j].epsilons = Smart64FArray(6, (double[]){115.0/256.0, 81.0/128.0, 35.0/128.0, 81.0/128.0, 115.0/256.0, 115.0/256.0});
@@ -135,13 +187,13 @@ int compose_fs_param(int nlevels, int ndims, const string &fs_param_opt, int ext
 			}
 		}
 	}
-	if (ext_size < 0)
-	{
-		return -2;
-	}
+//	if (ext_size < 0)
+//	{
+//		return -2;
+//	}
 	fs_param.ext_border = SmartIntArray(ndims, ext_size);
 
-	if (ext_opt != "rep" && ext_opt != "mir101" && ext_opt != "mir1001" && ext_opt != "blk")
+	if (ext_opt != "rep" && ext_opt != "mir101" && ext_opt != "mir1001" && ext_opt != "blk" && ext_opt != "none")
 	{
 		return -3;
 	}

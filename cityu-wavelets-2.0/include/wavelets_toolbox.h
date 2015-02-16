@@ -523,285 +523,6 @@ int check_mat_to_decompose(const ML_MD_FS_Param &fs_param, const Mat_<Vec<_Tp, 2
 	return 0;
 }
 
-/*
- * One-D filters are constructed and stored in 'ml_md_filter_sytem' for use in reconstruction procedure.
- */
-template<typename _Tp>
-int decompose_by_ml_md_filter_bank(const ML_MD_FS_Param &fs_param, const Mat_<Vec<_Tp, 2> > &input, ML_MD_FSystem<_Tp> &ml_md_filter_system, typename ML_MC_Filter_Norms_Set<_Tp>::type &norms_set, typename ML_MC_Coefs_Set<_Tp>::type &coefs_set)
-{
-
-	if (fs_param.nlevels < 1
-		|| input.dims != fs_param.ndims)
-	{
-		return -1;
-	}
-
-	int levels = fs_param.nlevels;
-	int input_dims = fs_param.ndims;
-	double input_size_prod = (double)input.total();
-
-	coefs_set.reserve(levels);
-	coefs_set.resize(levels);
-	norms_set.reserve(levels);
-	norms_set.resize(levels);
-
-	// This mat is to store product of low-pass filters of previous levels.
-	Mat_<Vec<_Tp, 2> > last_lowpass_product;
-	ml_md_filter_system = ML_MD_FSystem<_Tp>(levels, input_dims);
-	for (int cur_lvl = 0; cur_lvl < levels; ++cur_lvl)
-	{
-
-		// This mat is referred to as low-pass channel output last level.
-		Mat_<Vec<_Tp, 2> > last_approx;
-		Mat_<Vec<_Tp, 2> > last_approx_center_part;
-
-		if (cur_lvl == 0)	// when last_approx is empty().
-		{
-			normalized_fft<_Tp>(input, last_approx);
-			center_shift<_Tp>(last_approx, last_approx);
-		}
-		else
-		{
-			last_approx = coefs_set[cur_lvl - 1][coefs_set[cur_lvl - 1].size() - 1];
-			coefs_set[cur_lvl - 1].pop_back();
-		}
-
-		// This is the size of full filters at this level.
-		SmartIntArray md_filter_size(input_dims, last_approx.size);
-		// This is the number of filters at each dim at this level.
-		SmartIntArray filters_num_at_dim(input_dims);
-		SmartArray<SmartIntArray> lowpass_center_range_at_dim(input_dims);
-		const MD_FS_Param &this_level_param = fs_param.md_fs_param_at_level[cur_lvl];
-		MD_FSystem<_Tp> &this_level_md_fs = ml_md_filter_system.md_fs_at_level[cur_lvl];
-		double lowpass_ds_prod = 1.0;
-		for (int cur_dim = 0; cur_dim < input_dims; ++cur_dim)		// Every dim in this level
-		{
-
-			Mat_<Vec<_Tp, 2> > x_pts;
-			linspace<_Tp>(complex<_Tp>(-M_PI, 0), complex<_Tp>(M_PI, 0), md_filter_size[cur_dim], x_pts);
-
-			construct_1d_filter_system<_Tp>(x_pts, this_level_param.oned_fs_param_at_dim[cur_dim],
-					                   this_level_md_fs.oned_fs_at_dim[cur_dim]);
-
-			filters_num_at_dim[cur_dim] = this_level_md_fs.oned_fs_at_dim[cur_dim].filters.len;
-
-			lowpass_center_range_at_dim[cur_dim].reserve(3);
-			lowpass_center_range_at_dim[cur_dim][0] = md_filter_size[cur_dim] / 2
-										        - md_filter_size[cur_dim] / this_level_param.oned_fs_param_at_dim[cur_dim].lowpass_ds_fold / 2;
-			lowpass_center_range_at_dim[cur_dim][1] = -1;
-			lowpass_center_range_at_dim[cur_dim][2] = lowpass_center_range_at_dim[cur_dim][0]
-			                                               + md_filter_size[cur_dim] / this_level_param.oned_fs_param_at_dim[cur_dim].lowpass_ds_fold
-			                                               - 1;
-			lowpass_ds_prod *= this_level_param.oned_fs_param_at_dim[cur_dim].lowpass_ds_fold;
-		}
-
-		// This is to store down-sampled filters chosen currently for each dim.
-		SmartArray<Mat_<Vec<_Tp, 2> > > chosen_ds_filter_at_dim(input_dims);
-		// This is to store full filters chosen currently for each dim.
-		SmartArray<Mat_<Vec<_Tp, 2> > > chosen_full_filter_at_dim(input_dims);
-		SmartArray<Mat_<Vec<_Tp, 2> > > lowpass_filter_center_part_at_dim(input_dims);
-		SmartArray<SmartIntArray> supp_after_ds_at_dim(input_dims);
-
-
-		Mat_<Vec<_Tp, 2> > lowpass_filter;
-		SmartIntArray start_pos1(input_dims);
-		SmartIntArray cur_pos1(input_dims);
-		SmartIntArray step1(input_dims, 1);
-		{
-
-			int src_dims;
-			SmartIntArray src_start_pos;
-			SmartIntArray src_cur_pos;
-			SmartIntArray src_step;
-			SmartIntArray src_end_pos;
-
-			//User-Defined initialization
-			src_dims = input_dims;
-			src_start_pos = start_pos1;
-			src_cur_pos = cur_pos1;
-			src_step = step1;
-			src_end_pos = filters_num_at_dim;
-			//--
-
-			int cur_dim = src_dims - 1;
-			while(true)
-			{
-				while (cur_dim >= 0 && src_cur_pos[cur_dim] >= src_end_pos[cur_dim])
-				{
-					src_cur_pos[cur_dim] = src_start_pos[cur_dim];
-					--cur_dim;
-					if (cur_dim >= 0)
-					{
-						src_cur_pos[cur_dim] += src_step[cur_dim];
-						continue;
-					}
-				}
-				if (cur_dim < 0)
-				{
-					break;
-				}
-
-				//User-Defined actions
-				//A combination is found.
-				bool is_lowpass = true;
-				double highpass_ds_prod = 1.0;
-				//Should start at 0, since we need to check lowpass for ALL filters
-				for (int i = 0; i < src_dims; ++i)
-				{
-					const OneD_Filter<_Tp> &this_filter = this_level_md_fs.oned_fs_at_dim[i].filters[src_cur_pos[i]];
-					chosen_ds_filter_at_dim[i] = this_filter.folded_coefs;
-					chosen_full_filter_at_dim[i] = this_filter.coefs;
-					supp_after_ds_at_dim[i]= this_filter.support_after_ds;
-					//TODO here is conversion from Mat to Mat_
-					lowpass_filter_center_part_at_dim[i] = this_filter.coefs.colRange(lowpass_center_range_at_dim[i][0],
-							                                                          lowpass_center_range_at_dim[i][2] + 1);
-					is_lowpass = is_lowpass && this_filter.isLowPass;
-					highpass_ds_prod *= this_filter.highpass_ds_fold;
-				}
-
-
-				if (is_lowpass)
-				{
-					// Plan A --
-					Mat_<Vec<_Tp, 2> > md_filter_center_part;
-					tensor_product<_Tp>(lowpass_filter_center_part_at_dim, md_filter_center_part);
-					pw_pow<_Tp>(md_filter_center_part, (_Tp)2, md_filter_center_part);
-					if (lowpass_filter.empty())	// when lowpass_filter is empty().
-					{
-						lowpass_filter = md_filter_center_part;
-					}
-					else
-					{
-						lowpass_filter += md_filter_center_part;
-					}
-					// -- Plan A
-
-					// Plan B --
-//					Mat_<Vec<_Tp, 2> > full_md_filter, md_filter_subarea;
-//					tensor_product<_Tp>(chosen_full_filter_at_dim, full_md_filter);
-//					pw_pow<_Tp>(full_md_filter, (_Tp)2, full_md_filter);
-//					if (lowpass_filter.empty())
-//					{
-//						lowpass_filter = full_md_filter;
-//					}
-//					else
-//					{
-//						lowpass_filter += full_md_filter;
-//					}
-					// -- Plan B
-				}
-				else
-				{
-					//  Plan A--
-					Mat_<Vec<_Tp, 2> > folded_md_filter;
-					Mat_<Vec<_Tp, 2> > last_approx_subarea;
-					tensor_product<_Tp>(chosen_ds_filter_at_dim, folded_md_filter);
-					mat_select<_Tp>(last_approx, supp_after_ds_at_dim, last_approx_subarea);
-
-					pw_mul<_Tp>(last_approx_subarea, folded_md_filter, last_approx_subarea);
-					icenter_shift<_Tp>(last_approx_subarea, last_approx_subarea);
-					normalized_ifft<_Tp>(last_approx_subarea, last_approx_subarea);
-					coefs_set[cur_lvl].push_back(last_approx_subarea);
-					// -- Plan A
-
-
-					// Plan B --
-//					Mat_<Vec<_Tp, 2> > full_md_filter, last_approx_subarea, folded_md_filter;
-//					tensor_product<_Tp>(chosen_full_filter_at_dim, full_md_filter);
-//					mat_select<_Tp>(last_approx, supp_after_ds_at_dim, last_approx_subarea);
-//					mat_select<_Tp>(full_md_filter, supp_after_ds_at_dim, folded_md_filter);
-//					pw_mul<_Tp>(last_approx_subarea, folded_md_filter, last_approx_subarea);
-//					icenter_shift<_Tp>(last_approx_subarea, last_approx_subarea);
-//					normalized_ifft<_Tp>(last_approx_subarea, last_approx_subarea);
-//					coefs_set[cur_lvl].push_back(last_approx_subarea);
-
-					// -- Plan B
-
-
-
-
-					// Compute filters' norms.
-					if (cur_lvl == 0)	// when 'last_lowpass_product' is empty().
-					{
-						// At first level, 'last_lowpass_product' is regarded as I.
-						// lpnorm always return double-value.
-						double l2norm = lpnorm<_Tp>(folded_md_filter, static_cast<_Tp>(2));
-						norms_set[cur_lvl].push_back(l2norm / sqrt(input_size_prod) * sqrt(highpass_ds_prod));
-					}
-					else
-					{
-						Mat_<Vec<_Tp, 2> > last_lowpass_product_subarea;
-						//TODO: do mat_select on last_lowpass_product
-						mat_select<_Tp>(last_lowpass_product, supp_after_ds_at_dim, last_lowpass_product_subarea);
-						pw_mul<_Tp>(last_lowpass_product_subarea, folded_md_filter, last_lowpass_product_subarea);
-						double l2norm = lpnorm<_Tp>(last_lowpass_product_subarea, 2);
-						norms_set[cur_lvl].push_back(l2norm / sqrt(input_size_prod) * sqrt(highpass_ds_prod));
-					}
-				}
-				//-- User Action
-
-				cur_dim = src_dims - 1;
-				src_cur_pos[cur_dim] += src_step[cur_dim];
-			}
-
-		}
-
-		pw_sqrt<_Tp>(lowpass_filter, lowpass_filter);
-		if (true)
-		{
-			// Plan A --
-//			Mat_<Vec<_Tp, 2> > last_approx_subarea;
-			mat_select<_Tp>(last_approx, lowpass_center_range_at_dim, last_approx);
-			pw_mul<_Tp>(last_approx, lowpass_filter, last_approx);
-			// -- Plan A
-
-			// Plan B --
-
-//			Mat_<Vec<_Tp, 2> > last_approx_subarea, lowpass_filter_subarea;
-//			mat_select<_Tp>(last_approx, lowpass_center_range_at_dim, last_approx_subarea);
-//			mat_select<_Tp>(lowpass_filter, lowpass_center_range_at_dim, lowpass_filter_subarea);
-//			pw_mul<_Tp>(last_approx_subarea, lowpass_filter_subarea, last_approx_subarea);
-
-//			stringstream ss1;
-//			ss1 << "Test-Data/output/md-full-lp-filter-" << cur_lvl << "-" << hp_idx << ".png";
-//			save_as_media<_Tp>(ss1.str(), lowpass_filter, NULL);
-//			hp_idx++;
-			// -- Plan B
-
-
-			if (cur_lvl == levels - 1)
-			{
-				icenter_shift<_Tp>(last_approx, last_approx);
-				normalized_ifft<_Tp>(last_approx, last_approx);
-				coefs_set[cur_lvl].push_back(last_approx);
-			}
-			else
-			{
-				coefs_set[cur_lvl].push_back(last_approx);
-			}
-
-			// Compute filter norms. Here update 'last_lowpass_product'.
-			if (cur_lvl == 0)
-			{
-				last_lowpass_product = lowpass_filter;
-			}
-			else
-			{
-//				Mat_<Vec<_Tp, 2> > last_lowpass_product_subarea, product;
-				mat_select<_Tp>(last_lowpass_product, lowpass_center_range_at_dim, last_lowpass_product);
-				pw_mul<_Tp>(last_lowpass_product, lowpass_filter, last_lowpass_product);
-			}
-			last_lowpass_product = last_lowpass_product * sqrt(lowpass_ds_prod);
-
-		}
-
-	}
-
-	double l2norm = lpnorm<_Tp>(last_lowpass_product, (_Tp)2);
-	norms_set[levels - 1].push_back(l2norm / sqrt(input_size_prod));
-
-	return 0;
-}
 
 template<typename _Tp>
 int decompose_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const Mat_<Vec<_Tp, 2> > &input, ML_MD_FSystem<_Tp> &ml_md_filter_system, typename ML_MC_Filter_Norms_Set<_Tp>::type &norms_set, typename ML_MC_Coefs_Set<_Tp>::type &coefs_set)
@@ -931,6 +652,10 @@ int decompose_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const Mat_<V
 				pw_pow<_Tp>(md_filter_center_part, static_cast<_Tp>(2), md_filter_center_part);
 				// -- Plan A
 
+//				stringstream ss;
+//				ss << "Test-Data/output/filter_" << cur_lvl << "_" << n << ".txt";
+//				print_mat_details_g<_Tp>(md_filter_center_part, 2, ss.str());
+
 				// -- Speed up Plan B
 				if (fs_param.isSym && cur_pos == sym_cur_pos)
 				{
@@ -957,6 +682,7 @@ int decompose_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const Mat_<V
 				mat_select<_Tp>(last_approx, supp_after_ds_at_dim, last_approx_subarea);
 
 				pw_mul<_Tp>(last_approx_subarea, folded_md_filter, last_approx_subarea);
+
 				icenter_shift<_Tp>(last_approx_subarea, last_approx_subarea);
 				normalized_ifft<_Tp>(last_approx_subarea, last_approx_subarea);
 				coefs_set[cur_lvl].push_back(last_approx_subarea);
@@ -990,10 +716,12 @@ int decompose_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const Mat_<V
 
 		pw_sqrt<_Tp>(lowpass_filter, lowpass_filter);
 
+
 		if (true)
 		{
 			// Plan A --
 			mat_select<_Tp>(last_approx, lowpass_center_range_at_dim, last_approx);
+
 			pw_mul<_Tp>(last_approx, lowpass_filter, last_approx);
 			// -- Plan A
 
@@ -1028,191 +756,6 @@ int decompose_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const Mat_<V
 	return 0;
 }
 
-template<typename _Tp>
-int reconstruct_by_ml_md_filter_bank(const ML_MD_FS_Param &fs_param, const ML_MD_FSystem<_Tp> &filter_system, const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, Mat_<Vec<_Tp, 2> > &rec)
-{
-	int nlevels = fs_param.nlevels;
-	int ndims = fs_param.ndims;
-	if (nlevels < 1)
-	{
-		return -1;
-	}
-
-
-	// Every Level
-	Mat_<Vec<_Tp, 2> > upper_level_lowpass_approx;
-	Mat_<Vec<_Tp, 2> > this_level_lowpass_approx;
-	for (int cur_lvl = nlevels - 1; cur_lvl >= 0; --cur_lvl)
-	{
-		const typename MC_Coefs_Set<_Tp>::type &this_level_coefs_set = coefs_set[cur_lvl];
-		const MD_FSystem<_Tp> &this_level_fs = filter_system.md_fs_at_level[cur_lvl];
-		if (cur_lvl == nlevels - 1)
-		{
-			this_level_lowpass_approx = this_level_coefs_set[this_level_coefs_set.size() - 1].clone();
-			normalized_fft<_Tp>(this_level_lowpass_approx, this_level_lowpass_approx);
-			center_shift<_Tp>(this_level_lowpass_approx, this_level_lowpass_approx);
-		}
-		else
-		{
-			this_level_lowpass_approx = upper_level_lowpass_approx;
-		}
-
-		SmartIntArray this_level_full_filter_size_at_dim(ndims);
-		SmartIntArray this_level_filter_num_at_dim(ndims);
-		SmartArray<SmartIntArray> lowpass_center_range_at_dim(ndims);
-		for (int i = 0; i < ndims; ++i)
-		{
-			this_level_full_filter_size_at_dim[i] = this_level_lowpass_approx.size[i] * this_level_fs.oned_fs_at_dim[i].lowpass_ds_fold;
-			this_level_filter_num_at_dim[i] = this_level_fs.oned_fs_at_dim[i].filters.len;
-			lowpass_center_range_at_dim[i].reserve(3);
-			lowpass_center_range_at_dim[i][0] = this_level_full_filter_size_at_dim[i] / 2
-												- this_level_full_filter_size_at_dim[i] / this_level_fs.oned_fs_at_dim[i].lowpass_ds_fold / 2;
-			lowpass_center_range_at_dim[i][1] = -1;
-			lowpass_center_range_at_dim[i][2] = lowpass_center_range_at_dim[i][0]
-														   + this_level_full_filter_size_at_dim[i] / this_level_fs.oned_fs_at_dim[i].lowpass_ds_fold
-														   - 1;
-		}
-
-
-		// Find all combinations to do tensor product
-		SmartArray<Mat_<Vec<_Tp, 2> > > chosen_ds_filter_at_dim(ndims);
-		SmartArray<Mat_<Vec<_Tp, 2> > > lowpass_filter_center_part_at_dim(ndims);
-		SmartArray<SmartIntArray> supp_after_ds_at_dim(ndims);
-
-
-		Mat_<Vec<_Tp, 2> > this_level_highpass_sum(ndims, this_level_full_filter_size_at_dim, Vec<_Tp, 2>(0,0));
-		int coef_index = 0;
-		Mat_<Vec<_Tp, 2> > lowpass_filter;
-		SmartIntArray start_pos1(ndims);
-		SmartIntArray step1(ndims, 1);
-		{
-			int src_dims;
-			SmartIntArray src_start_pos;
-			SmartIntArray src_cur_pos;
-			SmartIntArray src_step;
-			SmartIntArray src_end_pos;
-
-
-			//User-Defined initialization
-			src_dims = ndims;
-			src_start_pos = start_pos1;
-			src_cur_pos = start_pos1.clone();
-			src_step = step1;
-			src_end_pos = this_level_filter_num_at_dim;
-			//--
-
-			int cur_dim = src_dims - 1;
-			while(true)
-			{
-				while (cur_dim >= 0 && src_cur_pos[cur_dim] >= src_end_pos[cur_dim])
-				{
-					src_cur_pos[cur_dim] = src_start_pos[cur_dim];
-					--cur_dim;
-					if (cur_dim >= 0)
-					{
-						src_cur_pos[cur_dim] += src_step[cur_dim];
-						continue;
-					}
-				}
-
-				if (cur_dim < 0)
-				{
-					break;
-				}
-
-				//User-Defined actions
-				//A combination is found.
-				bool is_lowpass = true;
-				//Start at 0, since we need to check lowpass for all filters
-				for (int i = 0; i < src_dims; ++i)
-				{
-					const OneD_Filter<_Tp> &this_filter = this_level_fs.oned_fs_at_dim[i].filters[src_cur_pos[i]];
-					chosen_ds_filter_at_dim[i] = this_filter.folded_coefs;
-					supp_after_ds_at_dim[i]= this_filter.support_after_ds;
-					lowpass_filter_center_part_at_dim[i] = this_filter.coefs.colRange(lowpass_center_range_at_dim[i][0],
-							                                                          lowpass_center_range_at_dim[i][2] + 1);
-					is_lowpass = is_lowpass && this_filter.isLowPass;
-				}
-
-
-				if (is_lowpass)
-				{
-//					pw_pow(md_filter, 2, md_filter);
-//					lowpass_filter += md_filter;
-					Mat_<Vec<_Tp, 2> > md_filter_center_part;
-					tensor_product<_Tp>(lowpass_filter_center_part_at_dim, md_filter_center_part);
-					pw_pow<_Tp>(md_filter_center_part, static_cast<_Tp>(2), md_filter_center_part);
-					if (lowpass_filter.empty())
-					{
-						lowpass_filter = md_filter_center_part;
-					}
-					else
-					{
-						lowpass_filter += md_filter_center_part;
-					}
-				}
-				else
-				{
-					Mat_<Vec<_Tp, 2> > this_channel_coef = this_level_coefs_set[coef_index].clone();
-
-					// To change phase of the coef
-//					SmartArray<Mat> ones_for_each_dim(sig_dims);
-//					for (int i = 0; i < sig_dims; ++i)
-//					{
-//						int this_dim_coef_size = this_channel_coef.size[i];
-//						Mat &ones_seq = ones_for_each_dim[i];
-//						ones_seq.create(2, (int[]){1, this_dim_coef_size}, CV_64FC2);
-//						ones_seq.at<complex<double> >(0, 0) = complex<double>(1,0);
-//						for (int j = 1; j < this_dim_coef_size; ++j)
-//						{
-//							ones_seq.at<complex<double> >(0, j) = ones_seq.at<complex<double> >(0, j - 1) * (-1.0);
-//						}
-//					}
-//					Mat phase_change;
-//					tensor_product(ones_for_each_dim, phase_change);
-//					pw_mul(this_channel_coef, phase_change, this_channel_coef);
-
-					normalized_fft<_Tp>(this_channel_coef, this_channel_coef);
-					center_shift<_Tp>(this_channel_coef, this_channel_coef);
-
-//					Mat filter_subarea, filtered, expanded_coef;
-					Mat_<Vec<_Tp, 2> > expanded_coef(ndims, this_level_full_filter_size_at_dim, Vec<_Tp, 2>(0,0));
-					Mat_<Vec<_Tp, 2> > ds_filter;
-					tensor_product<_Tp>(chosen_ds_filter_at_dim, ds_filter);
-					pw_mul<_Tp>(this_channel_coef, ds_filter, this_channel_coef);
-					mat_subfill<_Tp>(expanded_coef, supp_after_ds_at_dim, this_channel_coef);
-
-					this_level_highpass_sum += expanded_coef;
-					++coef_index;
-				}
-				//--
-
-				cur_dim = src_dims - 1;
-				src_cur_pos[cur_dim] += src_step[cur_dim];
-			}
-
-		}
-
-
-		pw_sqrt<_Tp>(lowpass_filter, lowpass_filter);
-		if (true)
-		{
-			pw_mul<_Tp>(this_level_lowpass_approx, lowpass_filter, this_level_lowpass_approx);
-
-			Mat_<Vec<_Tp, 2> > expanded_coef(ndims, this_level_full_filter_size_at_dim, Vec<_Tp, 2>(0,0));
-			mat_subfill<_Tp>(expanded_coef, lowpass_center_range_at_dim, this_level_lowpass_approx);
-			upper_level_lowpass_approx = this_level_highpass_sum + expanded_coef;
-		}
-
-	}
-
-	icenter_shift<_Tp>(upper_level_lowpass_approx, upper_level_lowpass_approx);
-	normalized_ifft<_Tp>(upper_level_lowpass_approx, upper_level_lowpass_approx);
-
-	rec = upper_level_lowpass_approx;
-
-	return 0;
-}
 
 template<typename _Tp>
 int reconstruct_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const ML_MD_FSystem<_Tp> &filter_system, const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, Mat_<Vec<_Tp, 2> > &rec)
@@ -1341,6 +884,10 @@ int reconstruct_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const ML_M
 				pw_mul<_Tp>(this_channel_coef, ds_filter, this_channel_coef);
 				mat_subadd(this_level_highpass_sum, supp_after_ds_at_dim, this_channel_coef);
 
+//				stringstream ss;
+//				ss << "Test-Data/output/rec_mul_" << cur_lvl << "_" << n << ".txt";
+//				print_mat_details_g<_Tp>(this_channel_coef, 2, ss.str());
+
 				++highpass_coef_index;
 			}
 			//--
@@ -1358,16 +905,22 @@ int reconstruct_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const ML_M
 			}
 
 			Mat_<Vec<_Tp, 2> > another_half_highpass_sum = this_level_highpass_sum.clone();
-			conj<_Tp>(another_half_highpass_sum);
-			rotate180shift1<_Tp>(another_half_highpass_sum, another_half_highpass_sum);
+//			conj<_Tp>(another_half_highpass_sum);
+			rotate180shift1conj<_Tp>(another_half_highpass_sum, another_half_highpass_sum);
 			this_level_highpass_sum += another_half_highpass_sum;
 		}
 		// -- Plan B
 
 		pw_sqrt<_Tp>(lowpass_filter, lowpass_filter);
+
 		if (true)
 		{
 			pw_mul<_Tp>(this_level_lowpass_approx, lowpass_filter, this_level_lowpass_approx);
+
+//			stringstream ss;
+//			ss << "Test-Data/output/rec_mul_lp_mid_" << cur_lvl << ".txt";
+//			print_mat_details_g<_Tp>(this_level_lowpass_approx, 2, ss.str());
+
 			mat_subadd<_Tp>(this_level_highpass_sum, lowpass_center_range_at_dim, this_level_lowpass_approx);
 			upper_level_lowpass_approx = this_level_highpass_sum;
 		}
@@ -1378,6 +931,7 @@ int reconstruct_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const ML_M
 	normalized_ifft<_Tp>(upper_level_lowpass_approx, upper_level_lowpass_approx);
 
 	rec = upper_level_lowpass_approx;
+
 
 	return 0;
 }

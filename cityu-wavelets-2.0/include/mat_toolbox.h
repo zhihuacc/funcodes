@@ -44,7 +44,7 @@ using namespace cv;
 
 bool sameSize(const Mat &left, const Mat &right);
 bool isGoodMat(const Mat &domain);
-double mat_error(const Mat &left, const Mat &right, const Mat &mask);
+//double mat_error(const Mat &left, const Mat &right, const Mat &mask);
 
 
 /*
@@ -705,40 +705,6 @@ int pw_sqrt(const Mat_<Vec<_Tp, 2> > &base, Mat_<Vec<_Tp, 2> > &res)
 	return 0;
 }
 
-template<typename _Tp, int cn>
-int pw_sqrt(const Mat_<Vec<_Tp, cn> > &base, Mat_<Vec<_Tp, cn> > &res, int c)
-{
-	if (!isGoodMat(base))
-	{
-		return -1;
-	}
-
-//	Mat_<Vec<_Tp, cn> > res_mat = base.clone();
-	res.create(base.dims, base.size);
-    int N = base.total();
-    Vec<_Tp, cn> *pbase = reinterpret_cast<Vec<_Tp, cn> *>(base.data),
-    		     *pres  = reinterpret_cast<Vec<_Tp, cn> *>(res.data);
-    if (0 <= c && c < cn)
-    {
-		for (int i = 0; i < N; ++i, ++pbase, ++pres)
-		{
-			(*pres)[c] = static_cast<_Tp>( sqrt( (*pbase)[c] ) );
-		}
-    }
-    else if (c == cn)
-    {
-		for (int i = 0; i < N; ++i, ++pbase, ++pres)
-		{
-			for (int j = 0; j < cn; ++j)
-			{
-				(*pres)[j] = static_cast<_Tp>( sqrt( (*pbase)[j] ) );
-			}
-		}
-    }
-//    res = res_mat;
-
-	return 0;
-}
 
 template<typename _Tp>
 int pw_less(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat_<Vec<_Tp, 2> > &res)
@@ -763,26 +729,7 @@ int pw_less(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat
 	return 0;
 }
 
-//template<typename _Tp>
-//int pw_less_ccr(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, Mat_<_Tp> &res)
-//{
-//    if (!isGoodMat(left) || !isGoodMat(right) || !sameSize(left, right))
-//    {
-//    	return -1;
-//    }
-//
-//    res.create(left.dims, left.size);
-//    int N = left.total();
-//    complex<_Tp> *pleft = reinterpret_cast<complex<_Tp> *>(left.data),
-//    		     *pright = reinterpret_cast<complex<_Tp> *>(right.data);
-//    		 _Tp *pres  = reinterpret_cast<_Tp *>(res.data);
-//    for (int i = 0; i < N; ++i, ++pleft, ++pright, ++pres)
-//    {
-//    	*pres = (*pleft).real() < (*pright).real();
-//    }
-//
-//	return 0;
-//}
+
 
 template<typename _Tp>
 int pw_less_rrr(const Mat_<_Tp> &left, const Mat_<_Tp> &right, Mat_<_Tp> &res)
@@ -823,15 +770,17 @@ int pw_less(const Mat_<Vec<_Tp, 2> > &left, const complex<_Tp> &alpha, Mat_<Vec<
 template<typename _Tp>
 int pw_less(const complex<_Tp> &alpha, const Mat_<Vec<_Tp, 2> > &right, Mat_<Vec<_Tp, 2> > &res)
 {
-	Mat_<Vec<_Tp, 2> > res_mat(right.dims, right.size, Vec<_Tp, 2>(0,0));
+//	Mat_<Vec<_Tp, 2> > res_mat(right.dims, right.size, Vec<_Tp, 2>(0,0));
+	res.create(right.dims, right.size);
     int N = right.total();
     complex<_Tp> *pright = reinterpret_cast<complex<_Tp> *>(right.data),
-    		     *pres  = reinterpret_cast<complex<_Tp> *>(res_mat.data);
+    		     *pres  = reinterpret_cast<complex<_Tp> *>(res.data);
     for (int i = 0; i < N; ++i, ++pright, ++pres)
     {
     	(*pres).real( alpha.real() < (*pright).real() );
+    	(*pres).imag( 0 );
     }
-    res = res_mat;
+//    res = res_mat;
 	return 0;
 }
 
@@ -858,30 +807,34 @@ int pw_lesseq(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, M
 template<typename _Tp>
 int pw_lesseq(const Mat_<Vec<_Tp, 2> > &left, const complex<_Tp> &alpha, Mat_<Vec<_Tp, 2> > &res)
 {
-	Mat_<Vec<_Tp, 2> > res_mat(left.dims, left.size, Vec<_Tp, 2>(0,0));
+//	Mat_<Vec<_Tp, 2> > res_mat(left.dims, left.size, Vec<_Tp, 2>(0,0));
+	res.create(left.dims, left.size);
     int N = left.total();
     complex<_Tp> *pleft = reinterpret_cast<complex<_Tp> *>(left.data),
-    		     *pres  = reinterpret_cast<complex<_Tp> *>(res_mat.data);
+    		     *pres  = reinterpret_cast<complex<_Tp> *>(res.data);
     for (int i = 0; i < N; ++i, ++pleft, ++pres)
     {
     	(*pres).real( (*pleft).real() <= alpha.real() );
+    	(*pres).imag( 0 );
     }
-    res = res_mat;
+//    res = res_mat;
 	return 0;
 }
 
 template<typename _Tp>
 int pw_lesseq(const complex<_Tp> &alpha, const Mat_<Vec<_Tp, 2> > &right, Mat_<Vec<_Tp, 2> > &res)
 {
-	Mat_<Vec<_Tp, 2> > res_mat(right.dims, right.size, Vec<_Tp, 2>(0,0));
+//	Mat_<Vec<_Tp, 2> > res_mat(right.dims, right.size, Vec<_Tp, 2>(0,0));
+	res.create(right.dims, right.size);
     int N = right.total();
     complex<_Tp> *pright = reinterpret_cast<complex<_Tp> *>(right.data),
-    		     *pres  = reinterpret_cast<complex<_Tp> *>(res_mat.data);
+    		     *pres  = reinterpret_cast<complex<_Tp> *>(res.data);
     for (int i = 0; i < N; ++i, ++pright, ++pres)
     {
     	(*pres).real( alpha.real() <= (*pright).real() );
+    	(*pres).imag( 0 );
     }
-    res = res_mat;
+//    res = res_mat;
 	return 0;
 }
 
@@ -994,6 +947,12 @@ template<typename _Tp>
 int mat_select(const Mat_<Vec<_Tp, 2> > &origin_mat, const SmartArray<SmartIntArray> &index_set_for_each_dim, Mat_<Vec<_Tp, 2> > &sub_mat)
 {
 	int dims = index_set_for_each_dim.len;
+	// class Mat uses a reverse order of indices.
+//	SmartArray<SmartIntArray> good_index_set_for_each_dim(dims);
+//	for (int i = 0; i < dims; ++i)
+//	{
+//		good_index_set_for_each_dim[dims - 1 - i] = index_set_for_each_dim[i];
+//	}
 	SmartIntArray start_pos1(dims);
 	SmartIntArray cur_pos1(dims);
 	SmartIntArray step1(dims);
@@ -1162,6 +1121,11 @@ template<typename _Tp>
 int mat_subadd(Mat_<Vec<_Tp, 2> > &origin_mat, const SmartArray<SmartIntArray> &index_set_for_each_dim, const Mat_<Vec<_Tp, 2> > &sub_mat)
 {
 	int dims = index_set_for_each_dim.len;
+//	SmartArray<SmartIntArray> good_index_set_for_each_dim(dims);
+//	for (int i = 0; i < dims; ++i)
+//	{
+//		good_index_set_for_each_dim[dims - 1 - i] = index_set_for_each_dim[i];
+//	}
 	SmartIntArray start_pos1(dims);
 	SmartIntArray cur_pos1(dims);
 	SmartIntArray step1(dims, 1);
@@ -1280,17 +1244,19 @@ int psnr(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, double
     	return -1;
     }
 
-	Mat_<Vec<_Tp, 2> > dif = left - right;
 	double msr_stat = 0.0;
-	MatConstIterator_<Vec<_Tp, 2> > it0 = dif.begin(), end0 = dif.end();
-
-	for (; it0 != end0; ++it0)
-	{
-		double sqr = static_cast<double>((*it0)[0] * (*it0)[0] + (*it0)[1] * (*it0)[1]);
-		msr_stat += sqr;
-	}
-
-	msr_stat = sqrt(msr_stat / left.total());
+//	Mat_<Vec<_Tp, 2> > dif = left - right;
+//	MatConstIterator_<Vec<_Tp, 2> > it0 = dif.begin(), end0 = dif.end();
+//
+//	for (; it0 != end0; ++it0)
+//	{
+//		double sqr = static_cast<double>((*it0)[0] * (*it0)[0] + (*it0)[1] * (*it0)[1]);
+//		msr_stat += sqr;
+//	}
+//
+//	msr_stat = sqrt(msr_stat / left.total());
+	msr_stat = norm(left - right, NORM_L2);
+	msr_stat /= sqrt( left.total() );
 
 	double psnr_stat = 0.0;
 
@@ -1301,6 +1267,28 @@ int psnr(const Mat_<Vec<_Tp, 2> > &left, const Mat_<Vec<_Tp, 2> > &right, double
 	msr = msr_stat;
 
 	return 0;
+}
+
+
+template<typename _Tp>
+double l2norm(const Mat_<Vec<_Tp, 2> > &mat)
+{
+    if (!isGoodMat(mat))
+    {
+    	return -1;
+    }
+
+	double msr_stat = 0.0;
+	MatConstIterator_<Vec<_Tp, 2> > it0 = mat.begin(), end0 = mat.end();
+
+	for (; it0 != end0; ++it0)
+	{
+//		double sqr = static_cast<double>((*it0)[0] * (*it0)[0] + (*it0)[1] * (*it0)[1]);
+		double sqr = static_cast<double>((*it0)[0] * (*it0)[0] + (*it0)[1] * (*it0)[1]);
+		msr_stat += sqr;
+	}
+
+	return sqrt(msr_stat);
 }
 
 
@@ -1319,6 +1307,32 @@ int tensor_product(const SmartArray<Mat_<Vec<_Tp, 2> > > &components_for_each_di
 	{
 		const Mat &cur_dim_comp = components_for_each_dim[cur_dim];   // column vector;
 		dim_size[cur_dim] = cur_dim_comp.total();
+		sub_mat = cur_dim_comp.t() * sub_mat;	//This is a 2D matrix. Transpose is O(1) operation.
+		sub_mat = sub_mat.reshape(0, 1);    //Convert to row vector. O(1) operation
+	}
+
+
+	// No need to zero.
+	Mat product_mat(ndims, dim_size, DataType<Vec<_Tp, 2> >::type);
+	std::copy(sub_mat.begin<Vec<_Tp, 2> >(), sub_mat.end<Vec<_Tp, 2> >(), product_mat.begin<Vec<_Tp, 2> >());
+//	memcpy((void*)product_mat.data, (void*)sub_mat.data, sub_mat.total() * sub_mat.elemSize());
+	product = product_mat;
+
+	return 0;
+}
+
+template<typename _Tp>
+int tensor_product2(const SmartArray<Mat_<Vec<_Tp, 2> > > &components_for_each_dim, Mat_<Vec<_Tp, 2> >  &product)
+{
+	//TODO: make sure all input components are continuous mat, and row vectors.
+	int ndims = components_for_each_dim.len;
+	SmartIntArray dim_size(ndims);
+	Mat sub_mat = components_for_each_dim[0];    //row vector
+	dim_size[ndims - 1] = components_for_each_dim[0].total();
+	for (int cur_dim = 1; cur_dim < ndims; ++cur_dim)
+	{
+		const Mat &cur_dim_comp = components_for_each_dim[cur_dim];   // column vector;
+		dim_size[ndims - 1 - cur_dim] = cur_dim_comp.total();
 		sub_mat = cur_dim_comp.t() * sub_mat;	//This is a 2D matrix. Transpose is O(1) operation.
 		sub_mat = sub_mat.reshape(0, 1);    //Convert to row vector. O(1) operation
 	}
@@ -1394,8 +1408,9 @@ void print_mat_details_g(const Mat_<Vec<_Tp, cn> > &mat, int field = cn, const s
 	SmartIntArray pos(dims);
 	SmartIntArray range(dims, mat.size);
 
-
-	cout << setiosflags(ios::fixed) << setprecision(3);
+	int old_precision = cout.precision();
+	ios_base::fmtflags old_flags = cout.flags();
+	cout << setiosflags(ios::fixed) << setprecision(4);
 	int cur_dim = dims - 1;
 	int t = 0;
 	while(true)
@@ -1470,6 +1485,8 @@ void print_mat_details_g(const Mat_<Vec<_Tp, cn> > &mat, int field = cn, const s
 		}
 		else
 		{
+			cout.precision(old_precision);
+			cout.flags(old_flags);
 			return;
 		}
 
@@ -1493,7 +1510,56 @@ void print_mat_details_g(const Mat_<Vec<_Tp, cn> > &mat, int field = cn, const s
 	{
 		cout.rdbuf(stdoutbuf);
 	}
+	cout.precision(old_precision);
+	cout.flags(old_flags);
+
+	return;
 }
+
+template <typename _Tp, int cn>
+void write_mat_dat(const Mat_<Vec<_Tp, cn> > &mat, const string &filename)
+{
+	streambuf *stdoutbuf = cout.rdbuf();
+	ofstream outfile;
+	if (filename != "cout")
+	{
+		outfile.open(filename.c_str(), ios_base::out | ios_base::app);
+		cout.rdbuf(outfile.rdbuf());
+	}
+	int old_precision = cout.precision();
+	ios_base::fmtflags old_flags = cout.flags();
+
+	cout.precision(16);
+	int ln = mat.size[mat.dims - 1];
+	int j = 0;
+	int N = mat.total();
+	Vec<_Tp, cn> *pv = reinterpret_cast<Vec<_Tp, cn> *>(mat.data);
+	for (int i = 0; i < N; ++i, ++pv)
+	{
+		for (int c = 0; c < cn; ++c)
+		{
+			cout << (*pv)[c] << " ";
+		}
+
+		++j;
+		if (j >= ln)
+		{
+			cout << endl;
+			j = 0;
+		}
+	}
+
+	if (filename != "cout")
+	{
+		cout.rdbuf(stdoutbuf);
+	}
+	cout.precision(old_precision);
+	cout.flags(old_flags);
+
+	return;
+}
+
+int log10space(double left, double right, int n, vector<double> &points);
 
 struct Media_Format
 {
@@ -1512,24 +1578,36 @@ struct Media_Format
 			int frame_width;
 		} video_prop;
 	};
+
+	string fname_no_path_suffix;
+	string suffix;
 };
 
 template<typename _Tp>
 int load_as_tensor(const string &filename, Mat_<Vec<_Tp, 2> > &output, Media_Format *media_file_fmt)
 {
-	size_t pos = filename.find_last_of('.');
-	if (pos == std::string::npos)
+	size_t dot_pos = filename.find_last_of('.');
+	if (dot_pos == std::string::npos)
 	{
+		cout << "load_as_tensor failed: " << filename << endl;
 		return -1;
 	}
+	size_t slash_pos = filename.find_last_of('/');
+	if (slash_pos == std::string::npos)
+	{
+		slash_pos = 0;
+	}
 
-	string suffix = filename.substr(pos);
+	media_file_fmt->suffix = filename.substr(dot_pos);
+	media_file_fmt->fname_no_path_suffix = filename.substr(slash_pos + 1, dot_pos);
+	string suffix = media_file_fmt->suffix;
 	// images
 	if (suffix == string(".jpg") || suffix == string(".bmp") || suffix == string(".jpeg") || suffix == string(".png"))
 	{
 		Mat img = imread(filename);
 		if (img.empty())
 		{
+			cout << "load_as_tensor failed: " << filename << endl;
 			return -2;
 		}
 
@@ -1541,6 +1619,7 @@ int load_as_tensor(const string &filename, Mat_<Vec<_Tp, 2> > &output, Media_For
 		case CV_8UC1:
 			break;
 		default:
+			cout << "load_as_tensor failed: wrong mat element type" << endl;
 			return -3;
 		}
 
@@ -1606,10 +1685,6 @@ int load_as_tensor(const string &filename, Mat_<Vec<_Tp, 2> > &output, Media_For
 				return -3;
 			}
 
-//			imshow("Current Frame", frame);
-//			waitKey();
-
-
 			Range ranges[3];
 			ranges[0] = Range(f, f + 1);
 			ranges[1] = Range::all();
@@ -1642,13 +1717,13 @@ int load_as_tensor(const string &filename, Mat_<Vec<_Tp, 2> > &output, Media_For
 template<typename _Tp>
 int save_as_media(const string &filename, const Mat_<Vec<_Tp, 2> > &mat, const Media_Format *media_file_fmt)
 {
-	size_t pos = filename.find_last_of('.');
-	if (pos == std::string::npos)
+	size_t dot_pos = filename.find_last_of('.');
+	if (dot_pos == std::string::npos)
 	{
 		return -1;
 	}
 
-	string suffix = filename.substr(pos);
+	string suffix =filename.substr(dot_pos);
 
     if (mat.dims == 2 && mat.size[0] != 1)
     {
@@ -1696,13 +1771,14 @@ int save_as_media(const string &filename, const Mat_<Vec<_Tp, 2> > &mat, const M
 
     if (mat.dims == 3)
     {
-    	if (media_file_fmt == NULL)
+    	int fps = 30;
+    	if (media_file_fmt != NULL)
     	{
-    		return -3;
+    		fps = media_file_fmt->video_prop.fps;
     	}
 
     	VideoWriter writer(filename, CV_FOURCC('P','I','M','1')
-    			         , media_file_fmt->video_prop.fps
+    			         , fps
     			         , Size(mat.size[2], mat.size[1]), false);
 
     	if (!writer.isOpened())
@@ -1846,6 +1922,11 @@ int mat_border_extension(const Mat_<Vec<_Tp, 2> > &origin, const SmartIntArray &
 	else if (opt == "blk")
 	{
 		bd_mode = 3;
+	}
+	else if (opt == "none")
+	{
+		extended = origin.clone();
+		return 0;
 	}
 	else if (opt == "cut")
 	{
@@ -2214,6 +2295,76 @@ int md_filtering(const Mat_<Vec<_Tp, 2> > &input, const Mat_<Vec<_Tp, 2> > &filt
 }
 
 template <typename _Tp>
+int rotate180shift1conj(const Mat_<Vec<_Tp, 2> > &mat, Mat_<Vec<_Tp, 2> > &rot_mat)
+{
+	int ndims = mat.dims;
+	SmartIntArray start_pos(ndims);
+	SmartIntArray cur_pos(ndims);
+	SmartIntArray step(ndims, 1);
+	SmartIntArray range(ndims, mat.size);
+	SmartIntArray sym_cur_pos(ndims);
+//	for (int i = 0; i < ndims; ++i)
+//	{
+//		sym_cur_pos[i] = range[i] - 1;
+//	}
+	Mat_<Vec<_Tp, 2> > tmp(ndims, range, Vec<_Tp, 2>(0,0));
+	{
+		int src_dims;
+		SmartIntArray src_start_pos;
+		SmartIntArray src_cur_pos;
+		SmartIntArray src_step;
+		SmartIntArray src_end_pos;
+
+		//User-Defined initialization
+		src_dims = ndims;
+		src_start_pos = start_pos;
+		src_cur_pos = cur_pos;
+		src_step = step;
+		src_end_pos = range;
+		//--
+
+		int cur_dim = src_dims - 1;
+		while(true)
+		{
+			while (cur_dim >= 0 && src_cur_pos[cur_dim] >= src_end_pos[cur_dim])
+			{
+				src_cur_pos[cur_dim] = src_start_pos[cur_dim];
+				--cur_dim;
+				if (cur_dim >= 0)
+				{
+					src_cur_pos[cur_dim] += src_step[cur_dim];
+					continue;
+				}
+			}
+			if (cur_dim < 0)
+			{
+				break;
+			}
+
+			//User-Defined actions
+			for (; cur_dim < src_dims; ++cur_dim)
+			{
+				sym_cur_pos[cur_dim] = range[cur_dim] - src_cur_pos[cur_dim];
+				if (sym_cur_pos[cur_dim] >= range[cur_dim])
+				{
+					sym_cur_pos[cur_dim] = 0;
+				}
+			}
+			Vec<_Tp, 2> v = mat.template at<Vec<_Tp, 2> >(src_cur_pos);
+			v[1] = -v[1];
+			tmp.template at<Vec<_Tp, 2> >(sym_cur_pos) = v;
+			//--
+
+			cur_dim = src_dims - 1;
+			src_cur_pos[cur_dim] += src_step[cur_dim];
+		}
+	}
+
+	rot_mat = tmp;
+	return 0;
+}
+
+template <typename _Tp>
 int rotate180shift1(const Mat_<Vec<_Tp, 2> > &mat, Mat_<Vec<_Tp, 2> > &rot_mat)
 {
 	int ndims = mat.dims;
@@ -2269,6 +2420,7 @@ int rotate180shift1(const Mat_<Vec<_Tp, 2> > &mat, Mat_<Vec<_Tp, 2> > &rot_mat)
 					sym_cur_pos[cur_dim] = 0;
 				}
 			}
+
 			tmp.template at<Vec<_Tp, 2> >(sym_cur_pos) = mat.template at<Vec<_Tp, 2> >(src_cur_pos);
 			//--
 
@@ -2419,16 +2571,31 @@ int separable_conv(Mat_<_Tp> &mat, const SmartArray<Mat_<_Tp> > &skerns)
 					for (int j = 0; j < M; ++j)
 					{
 						int idx = i + center -j;
-						if (idx < 0)
+						_Tp val = 0.0;
+//						{
+//							if (idx < 0)
+//							{
+//								idx += range[d];
+//							}
+//							else if (idx >= range[d])
+//							{
+//								idx -= range[d];
+//							}
+//							this_dim_pos[d] = idx;
+//							val = src.template at<_Tp>(this_dim_pos);
+//						}
 						{
-							idx += range[d];
+							if (idx < 0 || idx >= range[d])
+							{
+								val = 0;
+							}
+							else
+							{
+								this_dim_pos[d] = idx;
+								val = src.template at<_Tp>(this_dim_pos);
+							}
 						}
-						else if (idx >= range[d])
-						{
-							idx -= range[d];
-						}
-						this_dim_pos[d] = idx;
-						sum += (kern.template at<_Tp>(j) * src.template at<_Tp>(this_dim_pos));
+						sum += (kern.template at<_Tp>(j) * val);
 					}
 					this_dim_pos[d] = i;
 					dst.template at<_Tp>(this_dim_pos) = sum;
@@ -2448,6 +2615,5 @@ int separable_conv(Mat_<_Tp> &mat, const SmartArray<Mat_<_Tp> > &skerns)
 	return 0;
 }
 
-double mat_error(const Mat &left, const Mat &right);
 
 #endif
