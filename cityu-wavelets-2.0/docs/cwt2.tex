@@ -1,0 +1,420 @@
+\documentclass[a4paper,5pt]{article}
+\setlength{\parindent}{2em}
+\setlength{\parskip}{1em}
+\usepackage{listings}
+\lstset{
+         basicstyle=\footnotesize\ttfamily, % Standardschrift
+         %numbers=left,               % Ort der Zeilennummern
+         numberstyle=\tiny,          % Stil der Zeilennummern
+         %stepnumber=2,               % Abstand zwischen den Zeilennummern
+         numbersep=5pt,              % Abstand der Nummern zum Text
+         tabsize=2,                  % Groesse von Tabs
+         extendedchars=true,         %
+         breaklines=true,            % Zeilen werden Umgebrochen
+         keywordstyle=\color{red},
+         frame=single,         
+ %        keywordstyle=[1]\textbf,    % Stil der Keywords
+ %        keywordstyle=[2]\textbf,    %
+ %        keywordstyle=[3]\textbf,    %
+ %        keywordstyle=[4]\textbf,   \sqrt{\sqrt{}} %
+         stringstyle=\color{white}\ttfamily, % Farbe der String
+         showspaces=false,           % Leerzeichen anzeigen ?
+         showtabs=false,             % Tabs anzeigen ?
+         xleftmargin=17pt,
+         framexleftmargin=17pt,
+         framexrightmargin=5pt,
+         framexbottommargin=4pt,
+         %backgroundcolor=\color{lightgray},
+         showstringspaces=false      % Leerzeichen in Strings anzeigen ?        
+ }
+\title{Reference for CityU Wavelets Toolbox}
+\author{Xiaosheng Zhuang,    Zhihua CHE}
+\date{}
+\begin{document}
+\maketitle
+
+\tableofcontents
+
+\section{Installation}
+This section will introduce how to build CWT2 and its dependences from source codes. We also choose to install everything in a user-defined place. For Linux and MacOS, packages will be installed in \lstinline{/home/youraccount/local}, i.e, \lstinline{~/local}.
+
+\subsection{Building Dependencies}
+  CWT2 needs OpenCV, FFTW and Config4Star(Cpp version) to build on. OpenCV offers convenient and efficient data structure, i.e, \lstinline{Mat} and \lstinline{_Mat} to handle M-D matrix data. FFTW is a widely-used and high-performance FFT implementation. Config4Star is a flexible configuration file parser.
+  
+  Before building, we first go to \lstinline{~/local}, and then download and extract the source codes packages, and assume three source codes directories are generated in current directory, i.e, \lstinline{./opencv-src, ./fftw-src, ./config4cpp-src}.
+  
+\subsubsection{OpenCV}
+
+\begin{enumerate}
+
+\item[a)] Create a build directory \lstinline{./opencv-build} for opencv. Then enter it.
+\item[b)] Issue the command below to compile.
+
+\lstinline{$ cmake CMAKE_INSTALL_PREFIX=/home/youraccount/local ../opencv-src}
+\item[c)] If everything goes well, issue the command below to install the opencv to \lstinline{~/local}.
+
+\lstinline{$ make install}
+\end{enumerate}
+
+\subsubsection{FFTW}
+\begin{enumerate}
+\item[a)] Enter \lstinline{./fftw-src}.
+\item[b)] Issue the commands below successively.
+
+\lstinline{$ ./configure --prefix=/home/youraccount/local}    \\
+\lstinline{$ make}                                            \\
+\lstinline{$ make install}
+\end{enumerate}
+
+\subsubsection{Config4Star}
+This package is not tested on MacOS officially by its author. But We built and ran it on MacOS perfectly. We need change its scripts a bit to make it work on MacOS.
+
+\begin{enumerate}
+\item[a)] Goto \lstinline{./config4cpp-src}
+\item[b)] This step is to edit \lstinline{Makefile.inc} and needed only on MacOS. Skip to c) if you are not.
+First, open file \lstinline{Makefile.inc}, and then add this line \lstinline{OS=Linx} right before this line \lstinline{LIB_DIR=$(PROJECT_ROOT)/lib}. Finally goto line \lstinline{ifeq ($(OS),Linux)}, change the following line \lstinline{RANLIB = /bin/true} to lstinline{RANLIB = } and \lstinline{CXX = g++} to \lstinline{CXX = clang++}.
+\item[c)] Issue the command below to compile
+
+\lstinline{$ make}
+\item[d)] Issue the commands below.
+
+\lstinline{$ cp -rv include/config4cpp /home/youraccount/local/include}        \\
+\lstinline{$ cp -rv lib/libconfig4cpp.a /home/youraccount/local/lib}
+\end{enumerate}
+
+\subsection{CWT2}
+\begin{enumerate}
+\item[a)] Enter \lstinline{./cityu-wavelets-2.0}.
+\item[b)] For Linux, issue the command below
+
+\lstinline{$ make LIB_HOME=/home/youraccount/local}
+
+For MacOS, issue the command below
+
+\lstinline{$ make LIB_HOME=/home/youraccount/local CC=clang++ LINKER=clang++}
+
+\end{enumerate}
+
+
+\section{Binary Usage}
+
+\subsection{Overview}
+
+The command \lstinline{cwt2} is always issued in this format
+
+\lstinline{$ cwt2 [sub_commands] [options or parameters]}
+
+Currently the subcommands of \lstinline{denoise, inpaint, cvtxml and psnr} are supported. Here is an example.
+
+\lstinline{$ cwt2 denoise -cfg denoise.txt}
+
+\lstinline{denoise} is subcommand, and \lstinline{-cfg denoise.txt} is an option to specify that \lstinline{denoise.txt} is the configuration file for this subcommand.
+
+\subsection{Denoise}
+This subcommand always requires a configuration file in which all the parameters of controlling the denoising procedure are contained. The option $-cfg$ specifies the configuration file. This following is an full example config file for \lstinline{denoise}. Lines leading with \lstinline{#} are comments for each parameter.
+
+\begin{lstlisting}
+# There must be space before and after ?= .
+# You can override values in configuration file by adding command line options like this
+# $ ./cwt2 denoise -set nlevels 2
+
+# This list indicates input image or video files.
+fnames = ["Test-Data/Lena512.png"];
+
+# Specify the dec/rec levels
+nlevels ?= "5";
+
+# Specify the filter system. Currently support 'CTF3', 'CTF6', 'CTF6D4', 'CTF4'.
+fs ?= "CTF6D4";
+
+# Specify how many pixels will be expanded by.
+# Note: The program will figure a better number based on this parameter. The better one may be different
+#  from the parameter. Normally (not necessarily) it will be 2^(nlevels + 1)
+ext_size ?= "64";
+
+# Specify how the expanded pixels are interpolated. Currently support 'rep', 'mir1001',
+#  'mir101', 'blk'.
+ext_method ?= "mir1001";
+
+# Indicate whether the program speeds up by taking advtange of symmetry.
+is_sym ?= "true";
+
+doSave ?= "true";
+
+# Specify the mean of estimated noises.
+mean ?= "0";
+
+# Specify the standard deviation of estimated noises.
+stdev ?= "5";
+
+# Specify the const coefficient used in thresholding.
+c ?= "1.732051";
+
+# Specify the filter window width to do smooth convolution.
+wwidth ?= "7";
+
+# Indicate whether to do coefficient normalization.
+doNorm ?= "true";
+
+# Specify which method is used to do thresholding. Currently support 'localsoft', 'localadapt',
+# 'bishrink'.
+thr_method ?= "bishrink";
+\end{lstlisting}
+
+  When issuing this command, the value in the configuration file can be override by option $-set$. The format is \textit{-set parameter\_name  new\_parameter\_value}
+  
+  \$ cwt2 denoise -cfg denoise.txt -set nlevels 2
+  
+  Then the value of $nlevels$ would be 2 instead of 5 as specified in the file.
+  
+2.3 Inpaint
+
+  This command also requires a configuration file as \textit{denoise}. The following is full example configuration file.
+  
+\begin{lstlisting}
+
+# fnames is a list of names of files to be inpainted. 
+# These files may contain gaussian noises and masked areas.
+# masks is a list of names of files which act as masks of original files.
+fnames ?= ["Test-Data/Lena512.png"];
+masks ?= ["Test-Data/Text3.png"];
+
+# Indicate the end of first and second phase of sigmas array.
+# Clearly phase2_end is also equal to the total number of sigmas.
+phase1_end ?= "5";
+phase2_end ?= "13";
+
+# Specify the err tolerance of two phases.
+epsilon1 ?= "5e-3";
+epsilon2 ?= "1e-4";
+
+# Currently support 'auto', 'manul'.
+sigma_method ?= "auto";
+
+# The sigma array the inpaint procedure will iterate on. 
+# This array consists of two phases.
+# The first phase stops at phase1_end.
+sigmas ?= ["512.0000", "227.6198", "101.1929", "44.9873", "20.0000", 
+           "15.0000", "10.1877", "6.9193", "4.6995", "3.1918", 
+           "2.1678", "1.4724", "1.0000"];
+
+# Specify the denoising parameters which will be used in each 'denoising' step.
+# The value should match a subscope name defined below. 
+# Those subscopes define the denoising parameters in detail.
+params ?= ["CTF3a", "CTF3a", "CTF3a", "CTF3a", 
+           "CTF3a", "CTF6a", "CTF6a", "CTF6a", "CTF6a", 
+           "CTF6a", "CTF6a", "CTF6a", "CTF6a"];
+
+# Specify the maximum iter number. The procedure will
+# iterate no more than this number.
+max_iter ?= "1000";
+
+# Indicate how many pixels will be expanded by.
+# Note: This is different from command 'denoise', 
+#       where the program would figure a better size,
+#       while inpaint will not.
+# This means the program will expand the matrix exactly by this size. 
+# So please choose a good number here.
+ext_size ?= "8";
+ext_method ?= "mir1001";
+
+
+# Specify the sigma of noises added in original data.
+noise_sigma ?= "5";
+
+
+# Subscopes where denoising parameters are defined.
+# Different subscopes define different denoising parameters.
+# The meaning of these parameters can be found in the section 2.2
+CTF3a {
+nlevels ?= "2";
+fs ?= "CTF3";
+is_sym ?= "true";
+
+c ?= "1.73205";
+wwidth ?= "7";
+doNorm ?= "true";
+thr_method ?= "bishrink";
+}
+
+CTF6a {
+nlevels ?= "2";
+fs ?= "CTF6";
+is_sym ?= "true";
+
+c ?= "1.73205";
+wwidth ?= "7";
+doNorm ?= "true";
+thr_method ?= "bishrink";
+}
+
+\end{lstlisting}
+
+As \textit{denoise}, option \textit{-set} can be used to override the value in configuration file.
+
+2.4 cvtxml
+
+\textit{cvtxml} can convert data stored in image, video files into xml format. Issue command like this
+
+\$ cwt2 cvtxml Lena512.png Lena512.xml
+
+The command convert an image into a xml-format file containing the same data.
+
+\section{API reference}
+
+3.1 Overview
+This section gives a detailed description on public api in cwt2 package. The package consists of several submodules. One of important is \textit{wavelest\_toolbox} which supplies low-level  decomposition and reconstruction interfaces. Others are high-level \textit{denoising} and  \textit{inpaint} built on \textit{wavelets\_tooltox}.
+
+These submodules are manifested and exported by header files in the directory 'include'. The important headers are \textit{wavelets\_toolbox.h}, \textit{denoising.h} and \textit{inpaint.h}. \textit{wavelets\_toolbox} contains interfaces to do decomposition or reconstruction of M-d data, using tensor-product wavelets technique. \textit{denoising.h} and \textit{inpaint.h} supply interfaces to do denoising and inpainting respectively, by processing coefficients produced by decomposition.
+
+The packages are implemented using C++ template technique.
+
+3.2 wavelets toolbox
+
+\lstinline {int decompose_by_ml_md_filter_bank(const ML_MD_FS_Param &fs_param, const Mat_<Vec<_Tp, 2> > &input, ML_MD_FSystem<_Tp> &ml_md_filter_system, typename ML_MC_Filter_Norms_Set<_Tp>::type &norms_set, typename ML_MC_Coefs_Set<_Tp>::type &coefs_set) }
+
+\begin{lstlisting}
+  ML_MD_FS_Param fs_param
+\end{lstlisting}
+  this is a structure containing parameters of controlling decomposition and reconstruction procedure.
+  
+\begin{lstlisting}
+  Mat_<Vec<_Tp, 2> > &input
+\end{lstlisting}
+  input data to be decomposed
+  
+\begin{lstlisting}
+  ML_MD_FSystem<_Tp> &ml_md_filter_system
+\end{lstlisting}
+  This is an output argument. It contains the resulting 1-d filters used in decomposition. They are constructed during doing decomposition, according the parameters in f\_param. These filters will be passed into reconstruction interface to re-use, so that it can save the time to construct them again.
+  
+\begin{lstlisting}
+  ML_MC_Filter_Norms_Set<_Tp>::type &norms_set
+\end{lstlisting}
+  It is an output argument. It contains the norms of the m-d filters. They are used in various procedures later, like denoising. It is actually 2-d double-type array. \textit{norms\_[i][j]} is the ith-level, jth-channel filter's norm. The last element of last level is the low-pass filter's norm.
+  
+\begin{lstlisting}
+  ML_MC_Coefs_Set<_Tp>::type &coefs_set
+\end{lstlisting}
+  It is an output argument. It contains time-domain coefficients of input produced by this procedure. It has a similar structure as \textit{norms\_set}. \textit{norms\_set[i][j]} is the ith-level, jth-channel coeficient. The last element of last level is the low-pass filter's coeficient.
+  
+  The detailed definition of \textit{ML\_MD\_FS\_Param} is following.
+\begin{lstlisting}
+
+
+// ML_MD_FS_Param is a hierachical structure and there exists one element for each xxx xxxx xxxxx xxxx xxxxx xxxxxxxx xxxxx xxxxxxx xxxxxx xxxx xxxxx xxxxxx xxxxx xxxxx
+// dimension and each level.
+struct ML_MD_FS_Param
+{
+	// md_fs_param_at_level is an array of parameter structure.
+	// Each element of type MD_FS_Param corresponds to one level, 
+	// which specfies m-d filter systems in this level.
+	SmartArray<MD_FS_Param> md_fs_param_at_level;
+	
+	// Specfiy how many levels the filter systems is of.
+	int 					nlevels;
+	
+	// Specfiy how many dimensions the filter systems is of at each level.
+	int 					ndims;
+	
+	// Specify how many pixels will be expanded
+	SmartIntArray			ext_border;
+	
+	// Specify how the expaneded pixels are interpolated.
+	string					ext_method;
+	
+	bool 					isSym;
+	ML_MD_FS_Param():nlevels(0), ndims(0), isSym(false){}
+
+	ML_MD_FS_Param(int lvl, int d): nlevels(lvl), ndims(d), ext_border(ndims), isSym(false)
+	{
+		md_fs_param_at_level.reserve(nlevels);
+		for (int i = 0; i < nlevels; ++i)
+		{
+			md_fs_param_at_level[i].oned_fs_param_at_dim.reserve(ndims);
+		}
+	}
+};
+\end{lstlisting}
+
+You may note that the parameters in the structure corresponds to the configuration file. That is right. The values in configuration file will be passed into this structure and finally into the interfaces. The code snippet loads an image and decompose it into coefficient.
+
+\begin{lstlisting}
+	typedef double FLOAT_TYPE;
+
+	Mat_<Vec<FLOAT_TYPE, 2> > noisy_mat;
+	Media_Format mfmt;
+	load_as_tensor<FLOAT_TYPE>("img.png", noisy_mat, &mfmt);
+	
+	int ndims = noisy_mat.dims;
+	int nlevels = 5;
+	string fs_opt("CTF3");
+	int ext_size = 64;
+	string ext_method("bishrink");
+	bool is_sym = true;
+
+	ML_MD_FS_Param ml_md_fs_param;
+	int ret = compose_fs_param(nlevels, ndims, fs_opt, ext_size, ext_method, is_sym, ml_md_fs_param);
+	if (ret)
+	{
+		cout << "Error in FS param. " << endl;
+		return 0;
+	}
+	
+	ML_MD_FSystem<FLOAT_TYPE> 					        filter_system;
+	typename ML_MC_Coefs_Set<FLOAT_TYPE>::type 		    coefs_set, new_coefs_set;
+	typename ML_MC_Filter_Norms_Set<FLOAT_TYPE>::type 	norms_set;
+	decompose_by_ml_md_filter_bank<FLOAT_TYPE>(noisy_mat, ml_md_fs_param, filter_system, norms_set, coefs_set);
+	
+	// Now we can process the coefficients and save new coefficients in new_coef_set.
+	
+\end{lstlisting}
+  \textit{load\_as\_tensor} loads data in image, video, xml and returns a Mat object. All other interfaces will take Mat as input or output.
+  \textit{compose\_fs\_param} create a \textit{ML\_MD\_FS\_Param} object by composing and checking various parameters.
+  \textit{decompose\_by\_ml\_md\_filter\_bank} takes \textit{noisy\_mat} as input data to decompose, \textit{ml\_md\_fs\_param} as parameters to control the decomposition; meanwhile, \textit{ filter\_system} as output containing 1-d filters produced by the procedure, \textit{norms\_set} containing norms of the m-d filters, \textit{coefs\_set} containing resulting coeficients. 
+
+
+\begin{lstlisting}
+template<typename _Tp>
+int reconstruct_by_ml_md_filter_bank(const ML_MD_FS_Param &fs_param, const ML_MD_FSystem<_Tp> &filter_system, const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, Mat_<Vec<_Tp, 2> > &rec)
+\end{lstlisting}
+
+\textit{fs\_param} and \textit{filter\_system} are the same as \textit{decompose\_by\_ml\_md\_filter\_bank}. \textit{coefs\_set} are usually the output of the previous decomposition procedure. \textit{rec} is the resulting matrix reconstructed from the coeficients. The code snippet below is following the above one.
+
+\begin{lstlisting}
+  \\ After processing the coefficients, and getting new_coefs_set.
+  Mat_<Vec<FLOAT_TYPE, 2> > rec;
+	reconstruct_by_ml_md_filter_bank<FLOAT_TYPE>(ml_md_fs_param, filter_system, new_coefs_set, rec);
+	
+\end{lstlisting}
+
+\begin{lstlisting}
+template<typename _Tp>
+int thresholding(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, const string &opt, int wwidth, double c, double sigma, typename ML_MC_Coefs_Set<_Tp>::type &thr_set)
+\end{lstlisting}
+
+This interface does thresholding on the coefficients in \textit{coefs\_set}.
+\textit{coefs\_set} is input argument. \textit{opt} indicates which method is used to do thresholding, currently support \textit{localsoft}, \textit{localadapt}, \textit{bishrink}. \textit{wwidth}, \textit{c}, \textit{sigma} are commen parameters of the three thresholding method. \textit{thr\_set} is the new coefs as output.
+
+\begin{lstlisting}
+template <typename _Tp>
+int normalize_coefs(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, const typename ML_MC_Filter_Norms_Set<_Tp>::type &norms_set, bool forward, typename ML_MC_Coefs_Set<_Tp>::type &ncoefs_set)
+\end{lstlisting}
+
+Before thresholding, coefficients are usually normalized to improve performance. \textit{coefs\_set} contains original coefficients, \textit{norms\_set} are norms of m-d filters. They are all outputs of the decomposition procedure. \textit{forward} indicates normalization direction. \textit{ncoefs\_set} contains normalized or inverse-normalized coefficients. The following code is how to use the two interfaces to process coefficients.
+
+\begin{lstlisting}
+  // After calling decompose_by_ml_md_bank
+
+	normalize_coefs<FLOAT_TYPE>(coefs_set, norms_set, true, coefs_set);
+	
+	thresholding<FLOAT_TYPE>(coefs_set, "localsoft", 7, 1.732, 5, new_coefs_set);
+
+	normalize_coefs<FLOAT_TYPE>(new_coefs_set, norms_set, false, new_coefs_set);
+	
+  // Before calling reconstruct_by_ml_md_bank
+\end{lstlisting} 
+
+  This snippet normalizes the coefficients first, then does thresholding, and finally inverse-normalizes the new coefficients.
+
+\end{document}
