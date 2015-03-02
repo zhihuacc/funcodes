@@ -1,0 +1,47 @@
+# There must be space before and after ?= .
+# You can override values in configuration file by adding command line options like this
+# $ ./cwt2 denoise -set nlevels 2
+
+# This list indicates input image or video files.
+fnames = ["Test-Data/Lena512.png"];
+
+# Specify the dec/rec levels
+nlevels ?= "5";
+
+# Specify the filter system. Currently support 'CTF3', 'CTF6', 'CTF6D4', 'CTF4'.
+fs ?= "CTF6D4";
+
+# Specify how many pixels will be expanded by.
+# Note: The program will figure a better number based on this parameter. The better one may be different
+#  from the parameter. Normally (not necessarily) it will be 2^(nlevels + 1)
+ext_size ?= "64";
+
+# Specify how the expanded pixels are interpolated. Currently support 'rep', 'mir1001',
+#  'mir101', 'blk'.
+ext_method ?= "mir1001";
+
+# Indicate whether the program speeds up by taking advtange of symmetry.
+is_sym ?= "true";
+
+doSave ?= "true";
+
+# Specify the mean of estimated noises.
+mean ?= "0";
+
+# Specify the standard deviation of estimated noises.
+stdev ?= "5";
+
+# Specify the const coefficient used in thresholding.
+c ?= "1.732051";
+
+# Specify the filter window width to do smooth convolution.
+wwidth ?= "7";
+
+# Indicate whether to do coefficient normalization.
+doNorm ?= "true";
+
+# Specify which method is used to do thresholding. Currently support 'localsoft', 'localadapt',
+# 'bishrink'.
+thr_method ?= "bishrink";
+
+

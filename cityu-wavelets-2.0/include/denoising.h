@@ -353,7 +353,119 @@ int thresholding_denoise(const Mat_<Vec<_Tp, 2> > &noisy_input, const ML_MD_FS_P
 	return 0;
 }
 
-int denoise_entry(const Configuration *cfg, const string noisy_file);
-int denoising_demo(const string &fn);
+//int denoise_entry(const Configuration *cfg, const string &noisy_file);
+//int denoising_demo(const string &fn);
+
+template<typename _Tp>
+int batch_denoise(const Configuration *cfg, const string &top_scope)
+{
+	int ret = 0;
+	const char **fnames;
+	int fnum;
+	cfg->lookupList(top_scope.c_str(), "fnames", fnames, fnum);
+
+	int nlevels = cfg->lookupInt(top_scope.c_str(), "nlevels");
+	string fs_opt( cfg->lookupString(top_scope.c_str(), "fs") );
+	int ext_size = cfg->lookupInt(top_scope.c_str(), "ext_size");
+	string ext_method( cfg->lookupString(top_scope.c_str(), "ext_method") );
+//	string mat_file ( cfg->lookupString(param_scope.c_str(), "f") );
+
+	bool is_sym = cfg->lookupBoolean(top_scope.c_str(), "is_sym");
+//	int ndims = cfg->lookupInt(top_scope.c_str(), "ndims");
+
+	Mat_<Vec<_Tp, 2> > noisy_mat;
+	Media_Format mfmt;
+
+//	ML_MD_FS_Param ml_md_fs_param;
+//	int ret = compose_fs_param(nlevels, ndims, fs_opt, ext_size, ext_method, is_sym, ml_md_fs_param);
+//	if (ret)
+//	{
+//		cout << "Error in FS param. " << endl;
+//		return 0;
+//	}
+
+	cout << "Dec-Rec Paramters: " << endl;
+	cout << "  nlevels: " << nlevels << endl;
+//	cout << "  ndims: " << ndims << endl;
+	cout << "  fs: " << fs_opt << endl;
+	cout << "  ext_size: " << ext_size << endl;
+	cout << "  ext_method: " << ext_method << endl;
+	cout << "  is_sym: " << is_sym << endl;
+
+	double mean = static_cast<double>(cfg->lookupFloat(top_scope.c_str(), "mean"));
+	double stdev = static_cast<double>(cfg->lookupFloat(top_scope.c_str(), "stdev"));
+	double c = static_cast<double>(cfg->lookupFloat(top_scope.c_str(), "c"));
+	int wwidth = cfg->lookupInt(top_scope.c_str(), "wwidth");
+	bool doNorm = cfg->lookupBoolean(top_scope.c_str(), "doNorm");
+	string thr_method( cfg->lookupString(top_scope.c_str(), "thr_method") );
+
+	Thresholding_Param thr_param;
+	ret = compose_thr_param(mean, stdev, c, wwidth, doNorm, thr_method, thr_param);
+	if (ret)
+	{
+		cout << "Error in Thr param. " << endl;
+		return 0;
+	}
+
+	cout << endl << "Thresholding Parameters: " << endl;
+	cout << "  mean: " << mean << endl;
+	cout << "  stdev: " << stdev << endl;
+	cout << "  c: " << c << endl;
+	cout << "  wwidth: " << wwidth << endl;
+	cout << "  doNorm: " << doNorm << endl;
+	cout << "  thr_method: " << thr_method << endl;
+
+
+	for (int f = 0; f < fnum; ++f)
+	{
+		string fname(fnames[f]);
+
+		Mat_<Vec<_Tp, 2> > clean_mat, noisy_mat;
+		Mat_<Vec<_Tp, 1> > channels[2];
+
+		load_as_tensor<_Tp>(fname, clean_mat, &mfmt);
+		int ndims = clean_mat.dims;
+
+		ML_MD_FS_Param ml_md_fs_param;
+		ret = compose_fs_param(nlevels, ndims, fs_opt, ext_size, ext_method, is_sym, ml_md_fs_param);
+		if (ret)
+		{
+			cout << "Error in FS param. " << endl;
+			return 0;
+		}
+
+			// Fake up noises.
+		channels[0] = Mat_<Vec<_Tp, 1> >(clean_mat.dims, clean_mat.size);
+		channels[1] = Mat_<Vec<_Tp, 1> >(clean_mat.dims, clean_mat.size, Vec<_Tp, 1>((_Tp)0));
+		randn(channels[0], mean, stdev);
+		merge(channels, 2, noisy_mat);
+		channels[0].release();
+		channels[1].release();
+
+//		load_as_tensor<FLOAT_TYPE>("Test-Data/nnoise90-512.png", noisy_mat, &mfmt);
+//		write_mat_dat<FLOAT_TYPE, 2>(noisy_mat, "Test-Data/output/noises90.dat");
+		noisy_mat += clean_mat;
+
+
+		double score, msr;
+		psnr<_Tp>(noisy_mat, clean_mat, score, msr);
+		cout << "Denosing " << fname << " Start: psnr: " << score << ", msr: " << msr << endl;
+
+		Mat_<Vec<_Tp, 2> > denoised_mat;
+		thresholding_denoise<_Tp>(noisy_mat, ml_md_fs_param, thr_param, denoised_mat);
+
+		bool doSave = cfg->lookupBoolean(top_scope.c_str(), "doSave");
+		if (doSave)
+		{
+			string denoised_file = fname + "_denoised_" + mfmt.suffix;
+			save_as_media<_Tp>(denoised_file, denoised_mat, &mfmt);
+		}
+
+		psnr<_Tp>(denoised_mat, clean_mat, score, msr);
+		cout << "Denoising " << fname << " Done: psnr: " << score << ", msr: " << msr << endl;
+	}
+
+	return 0;
+}
 
 #endif

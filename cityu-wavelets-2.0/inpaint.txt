@@ -1,0 +1,62 @@
+# There must be space before and after ?= .
+# You can override values in configuration file by adding command line options like this
+# $ ./cwt denoise noisy.avi -set nlevels 3
+# the command above will set 'nlevels' 3 instead of 2.
+# Note: underscore is not recognizable.
+
+fnames ?= ["Test-Data/coastguard192.avi"];
+masks ?= ["Test-Data/192M50.avi"];
+
+# Indicate the end of first phase of sigmas array.
+phase1_end ?= "5";
+phase2_end ?= "13";
+
+# Specify the err tolerance of two phases.
+epsilon1 ?= "5e-3";
+epsilon2 ?= "1e-4";
+
+# Currently support 'auto', 'manul'.
+sigma_method ?= "auto";
+
+# The sigma array the command 'inpaint' will iterate on. This array consists of two phases.
+#sigmas ?= ["512.0000", "227.6198", "101.1929", "44.9873", "20.0000", "15.0000", "12.8059", "10.9328", "9.3336", "7.9684", "6.8028", "5.8078", "4.9582"];
+sigmas ?= ["512.0000", "227.6198", "101.1929", "44.9873", "20.0000", "15.0000", "10.1877", "6.9193", "4.6995", "3.1918", "2.1678", "1.4724", "1.0000"];
+#sigmas ?= ["24", "22", "20", "18", "16", "14", "12", "10", "8", "6", "4", "2", "1.0000"];
+
+# Specify which filter system will be used in each 'denoising' step.
+#params ?= ["CTF3a", "CTF3a", "CTF3a", "CTF3a", "CTF3a", "CTF3a", "CTF3a", "CTF3a", "CTF3a", "CTF3a", "CTF3a", "CTF3a", "CTF3a"];
+params ?= ["CTF3a", "CTF3a", "CTF3a", "CTF3a", "CTF3a", "CTF6a", "CTF6a", "CTF6a", "CTF6a", "CTF6a", "CTF6a", "CTF6a", "CTF6a"];
+#params ?= ["CTF6a", "CTF6a", "CTF6a", "CTF6a", "CTF6a", "CTF6a", "CTF6a", "CTF6a", "CTF6a", "CTF6a", "CTF6a", "CTF6a", "CTF6a"];
+
+max_iter ?= "100";
+
+# Indicate how many pixels will be expanded by.
+# Note: This is different from command 'denoise', where the program would figure a better size, while inpaint will not.
+#   This means the program will expand the matrix exactly by this size. So please choose a good number here.
+ext_size ?= "32";
+ext_method ?= "mir1001";
+
+noise_sigma ?= "0";
+
+CTF3a {
+nlevels ?= "4";
+fs ?= "CTF3";
+is_sym ?= "true";
+
+c ?= "1.73205";
+wwidth ?= "7";
+doNorm ?= "true";
+thr_method ?= "bishrink";
+}
+
+CTF6a {
+nlevels ?= "4";
+fs ?= "CTF6";
+is_sym ?= "true";
+
+c ?= "1.73205";
+wwidth ?= "7";
+doNorm ?= "true";
+thr_method ?= "bishrink";
+}
+

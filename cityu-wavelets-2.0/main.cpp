@@ -86,7 +86,7 @@ int cmd_config_parse(int argc, char **argv)
 		if (sub_cmd == "denoise")
 		{
 			prepopulate_config(cfg, "", argc - 2, argv + 2);
-			denoise_entry(cfg, "");
+			batch_denoise<double>(cfg, "");
 		}
 		else if (sub_cmd == "psnr")
 		{
@@ -101,11 +101,11 @@ int cmd_config_parse(int argc, char **argv)
 //			prepopulate_config(cfg, argc - 3, argv + 3);
 			cvtxml_entry(fn);
 		}
-		else if (sub_cmd == "denodemo")
-		{
-			string fn(argv[2]);
-			denoising_demo(fn);
-		}
+//		else if (sub_cmd == "denodemo")
+//		{
+//			string fn(argv[2]);
+//			denoising_demo(fn);
+//		}
 		else if (sub_cmd == "inpaint")
 		{
 			prepopulate_config(cfg, "", argc - 2, argv + 2);
