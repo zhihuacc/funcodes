@@ -1438,20 +1438,20 @@ void print_mat_details_g(const Mat_<Vec<_Tp, cn> > &mat, int field = cn, const s
 				cout << endl << endl;
 			}
 			first_row = false;
-			cout << "[";
-			for (int idx = 0; idx < dims; ++idx)
-			{
-				cout << pos[idx];
-				if (idx < dims - 1)
-				{
-					cout << ",";
-				}
-				else
-				{
-					cout << "]";
-				}
-			}
-			cout << endl;
+//			cout << "[";
+//			for (int idx = 0; idx < dims; ++idx)
+//			{
+//				cout << pos[idx];
+//				if (idx < dims - 1)
+//				{
+//					cout << ",";
+//				}
+//				else
+//				{
+//					cout << "]";
+//				}
+//			}
+//			cout << endl;
 			t = 0;
 		}
 
@@ -2612,6 +2612,138 @@ int separable_conv(Mat_<_Tp> &mat, const SmartArray<Mat_<_Tp> > &skerns)
 		dst = tmp;
 	}
 	mat = src;
+	return 0;
+}
+
+template<typename _Tp>
+int frequency_domain_density(const Mat_<Vec<_Tp, 2> > &mat, double r, const SmartIntArray &bins, Mat_<Vec<_Tp, 2> > &hist)
+{
+	if (mat.dims - 1 != bins.size())
+	{
+		return -1;
+	}
+
+	int ndims = mat.dims;
+	SmartIntArray start_pos(ndims);
+	SmartIntArray cur_pos(ndims);
+	SmartIntArray step(ndims, 1);
+	SmartIntArray range(ndims, mat.size);
+//	Smart64FArray sphere_coordinates(ndims - 1);
+	SmartIntArray sphere_coordinates(bins.size());
+
+	Smart64FArray bin_width(bins.size());
+	for (int i = ndims - 2; i >= 0; --i)
+	{
+		if (i == ndims - 2)
+		{
+			bin_width[i] = 2 * M_PI / bins[i];
+		}
+		else
+		{
+			bin_width[i] = M_PI / bins[i];
+		}
+	}
+
+	Mat_<Vec<_Tp, 2> > tmp(bins.len, bins, Vec<_Tp, 2>(0,0));
+	double total_energy = 0.0;
+	double this_freq_energy = 0.0;
+	{
+		int src_dims;
+		SmartIntArray src_start_pos;
+		SmartIntArray src_cur_pos;
+		SmartIntArray src_step;
+		SmartIntArray src_end_pos;
+
+		//User-Defined initialization
+		src_dims = ndims;
+		src_start_pos = start_pos;
+		src_cur_pos = cur_pos;
+		src_step = step;
+		src_end_pos = range;
+		//--
+
+		int cur_dim = src_dims - 1;
+		while(true)
+		{
+			while (cur_dim >= 0 && src_cur_pos[cur_dim] >= src_end_pos[cur_dim])
+			{
+				src_cur_pos[cur_dim] = src_start_pos[cur_dim];
+				--cur_dim;
+				if (cur_dim >= 0)
+				{
+					src_cur_pos[cur_dim] += src_step[cur_dim];
+					continue;
+				}
+			}
+			if (cur_dim < 0)
+			{
+				break;
+			}
+
+			//User-Defined actions
+			SmartIntArray dv(ndims);
+			for (int i = 0; i < ndims; ++i)
+			{
+				dv[i] = src_cur_pos[i] - range[i] / 2;
+			}
+
+
+			double d = 0.0;
+			for (int i = 0; i < ndims; ++i)
+			{
+				d += dv[i] * dv[i];
+			}
+			d = sqrt(d);
+
+			if (d >= r)
+			{
+				this_freq_energy = mat(src_cur_pos)[0] * mat(src_cur_pos)[0];
+				total_energy += this_freq_energy;
+				double sqr_sum = dv[ndims - 1] * dv[ndims - 1];
+				for (int i = ndims - 2; i >= 0; --i)
+				{
+
+					sqr_sum += dv[i] * dv[i];
+					if (fabs(sqr_sum - 0.0) < numeric_limits<double>::epsilon())
+					{
+						sphere_coordinates[i] = 0;
+						continue;
+					}
+					if (i == ndims - 2)
+					{
+						if (dv[i + 1] >= 0)
+						{
+							sphere_coordinates[i] = static_cast<int>(acos(dv[i] / sqrt(sqr_sum)) / bin_width[i] + numeric_limits<double>::epsilon());
+						}
+						else
+						{
+							sphere_coordinates[i] = static_cast<int>((2 * M_PI - acos(dv[i] / sqrt(sqr_sum))) / bin_width[i] + numeric_limits<double>::epsilon());
+						}
+					}
+					else
+					{
+						sphere_coordinates[i] = static_cast<int>(acos(dv[i] / sqrt(sqr_sum)) / bin_width[i] + numeric_limits<double>::epsilon());
+					}
+				}
+				if (ndims == 2)
+				{
+					tmp(sphere_coordinates[0]) += Vec<_Tp, 2>(this_freq_energy, 0);
+				}
+				else
+				{
+					tmp(sphere_coordinates) += Vec<_Tp, 2>(this_freq_energy, 0);
+				}
+			}
+			//--
+
+			cur_dim = src_dims - 1;
+			src_cur_pos[cur_dim] += src_step[cur_dim];
+		}
+	}
+
+	tmp /= total_energy;
+	hist = tmp;
+
 	return 0;
 }
 

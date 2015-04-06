@@ -69,7 +69,7 @@ struct SmartArray
 		}
 	}
 
-	inline int size() { return len; }
+	inline int size() const { return len; }
 
     inline const T& operator[](int i) const { return p.get()[i]; }
     inline T& operator[](int i) { return p.get()[i]; }
@@ -91,9 +91,22 @@ struct SmartArray
 
     inline bool operator != (const SmartArray& sz) const {return !(*this == sz);}
 
-    SmartArray clone() const {
+    inline SmartArray clone() const {
     	SmartArray deepcpy(this->len, this->p.get());
     	return deepcpy;
+    }
+
+    inline void copy(SmartArray &dst)
+    {
+    	if (len != dst.size())
+    	{
+    		return;
+    	}
+    	T *tmp = p.get();
+    	for (int i = 0; i < len; ++i)
+    	{
+    		dst[i] = tmp[i];
+    	}
     }
 
     static inline SmartArray konst(int s, const T &k)

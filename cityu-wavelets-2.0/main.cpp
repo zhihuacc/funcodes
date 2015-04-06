@@ -14,10 +14,11 @@ int cmd_config_parse(int argc, char **argv);
 
 int main(int argc, char **argv)
 {
-	setlocale(LC_ALL, "");
-	cmd_config_parse(argc, argv);
 
-	return 0;
+//	setlocale(LC_ALL, "");
+//	cmd_config_parse(argc, argv);
+//
+//	return 0;
 
 	Unit_Test unit_test;
 //	unit_test.psnr_test(argc, argv);
@@ -34,7 +35,15 @@ int main(int argc, char **argv)
 
 //	unit_test.fft_center_shift_test(argc, argv);
 
-	unit_test.test_any(argc, argv);
+//	unit_test.conv_and_ds_test(argc, argv);
+
+//	unit_test.conv_and_us_test(argc, argv);
+
+//	unit_test.comp_supp_test(argc, argv);
+
+	unit_test.performance_test(argc, argv);
+
+//	unit_test.test_any(argc, argv);
 }
 
 

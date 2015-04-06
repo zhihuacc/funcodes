@@ -4,6 +4,8 @@
 #include "include/denoising.h"
 #include "include/inpaint.h"
 
+#include "include/compact_support_wavelets.h"
+
 int Unit_Test::decomposition_test(int argc, char **argv)
 {
 //#define FLOAT_TYPE double
@@ -685,48 +687,402 @@ int Unit_Test::psnr_test(int argc, char **argv)
 	return 0;
 }
 
-int Unit_Test::test_any(int argc, char **argv)
+int Unit_Test::conv_and_ds_test(int argc, char **argv)
 {
-	vector<double> sigmas;
-	figure_good_sigmas(5, 0.8708, 5, 8, sigmas);
-	for (int i = 0; i < (int)sigmas.size(); ++i)
-	{
-		cout << sigmas[i] << " ";
-	}
-	cout << endl;
+	Media_Format mfmt1, mfmt2;
+	Mat_<Vec<double, 2> > mat1, mat2, mat3;
+	load_as_tensor<double>("Test-Data/Lena512.png", mat1, &mfmt1);
+
+	Mat_<Vec<double, 2> > td_filter1(2, (int[]){1, 2}, Vec<double, 2>(0,0));
+	Mat_<Vec<double, 2> > td_filter2(2, (int[]){1, 2}, Vec<double, 2>(0,0));
+	td_filter1(0,0)[0] = 1.0 / 1.4142;
+	td_filter1(0,1)[0] = 1.0 / 1.4142;
+//	td_filter(0,2)[0] = 1.0 / 5.0;
+//	td_filter(0,3)[0] = 1.0 / 5.0;
+//	td_filter(0,4)[0] = 1.0 / 5.0;
+
+	td_filter2(0,0)[0] = 1.0 / 1.4142;
+	td_filter2(0,1)[0] = -1.0 / 1.4142;
+
+	SmartArray<OneD_TD_Filter<double> > skerns(2);
+	skerns[0].coefs = td_filter1;
+	skerns[0].anchor = 0;
+	skerns[1].coefs = td_filter2;
+	skerns[1].anchor = 0;
+//	skerns[3].coefs = td_filter;
+//	skerns[3].anchor = 0;
+
+	clock_t s0, s1;
+	string msg;
+//	conv_by_separable_kernels<double>(mat1, skerns, true, mat2);
+////	save_as_media<double>("Test-Data/Barbara512-conv.png", mat1, NULL);
+//	s0 = tic();
+//	conv_by_separable_kernels<double>(mat1, skerns, false, mat2);
+//	s1 = tic();
+//	msg = show_elapse(s1 - s0);
+//	cout << msg << endl;
+
+	SmartIntArray step_size(2, (int[]){2,2});
+	conv_by_separable_kernels_and_ds<double>(mat1, skerns, step_size, true, mat2);
+//	clock_t s2 = tic();
+//	msg = show_elapse(s2 - s1);
+//	cout << msg << endl;
+
+	save_as_media<double>("Test-Data/output/Barbara512-conv.png", mat2, NULL);
+
+	SmartIntArray ds_steps(2, (int[]){2,2});
+	downsample(mat2, ds_steps, mat3);
+	save_as_media<double>("Test-Data/output/Barbara512-conv-ds.png", mat3, NULL);
+
+//	ds_steps[0] = 1;
+//	upsample(mat3, ds_steps, mat3);
+//	save_as_media<double>("Test-Data/output/Barbara512-conv-us.png", mat3, NULL);
 
 	return 0;
+}
 
-	Mat_<Vec<double, 2> > mat(3, (int[]){10, 10, 10}, Vec<double, 2>(0,0));
-	for (int i = 0; i < mat.size[0]; ++i)
+int Unit_Test::conv_and_us_test(int argc, char **argv)
+{
+	Media_Format mfmt1, mfmt2;
+	Mat_<Vec<double, 2> > mat1, mat2, mat3;
+	load_as_tensor<double>("Test-Data/Lena512.png", mat1, &mfmt1);
+
+	Mat_<Vec<double, 2> > td_filter1(2, (int[]){1, 2}, Vec<double, 2>(0,0));
+	Mat_<Vec<double, 2> > td_filter2(2, (int[]){1, 2}, Vec<double, 2>(0,0));
+	td_filter1(0,0)[0] = 1.0 / 1.4142;
+	td_filter1(0,1)[0] = 1.0 / 1.4142;
+//	td_filter(0,2)[0] = 1.0 / 5.0;
+//	td_filter(0,3)[0] = 1.0 / 5.0;
+//	td_filter(0,4)[0] = 1.0 / 5.0;
+
+	td_filter2(0,0)[0] = -1.0 / 1.4142;
+	td_filter2(0,1)[0] = 1.0 / 1.4142;
+
+	SmartArray<OneD_TD_Filter<double> > skerns(2);
+	skerns[0].coefs = td_filter1;
+	skerns[0].anchor = 1;
+	skerns[1].coefs = td_filter2;
+	skerns[1].anchor = 1;
+//	skerns[3].coefs = td_filter;
+//	skerns[3].anchor = 0;
+
+	clock_t s0, s1;
+	string msg;
+//	conv_by_separable_kernels<double>(mat1, skerns, true, mat2);
+////	save_as_media<double>("Test-Data/Barbara512-conv.png", mat1, NULL);
+//	s0 = tic();
+//	conv_by_separable_kernels<double>(mat1, skerns, false, mat2);
+//	s1 = tic();
+//	msg = show_elapse(s1 - s0);
+//	cout << msg << endl;
+
+	SmartIntArray step_size(2, (int[]){2,2});
+	conv_by_separable_kernels_and_us<double>(mat1, skerns, step_size, true, mat2);
+
+	upsample<double>(mat1, step_size, mat3);
+	conv_by_separable_kernels<double>(mat3, skerns, true, mat3);
+//	clock_t s2 = tic();
+//	msg = show_elapse(s2 - s1);
+//	cout << msg << endl;
+
+	double score, msr;
+	psnr<double>(mat2, mat3, score, msr);
+	cout << "PSNR: score: " << score << " msr: " << msr << endl;
+
+	save_as_media<double>("Test-Data/output/conv1.png", mat2, NULL);
+//
+//	SmartIntArray ds_steps(2, (int[]){2,2});
+//	downsample(mat2, ds_steps, mat3);
+	save_as_media<double>("Test-Data/output/conv2.png", mat3, NULL);
+
+//	ds_steps[0] = 1;
+//	upsample(mat3, ds_steps, mat3);
+//	save_as_media<double>("Test-Data/output/Barbara512-conv-us.png", mat3, NULL);
+
+	return 0;
+}
+
+int Unit_Test::test_any(int argc, char **argv)
+{
+
+
+//	Media_Format mfmt1, mfmt2;
+//	Mat_<Vec<double, 2> > mat1, mat2;
+//	load_as_tensor<double>("Test-Data/Lena512.png", mat1, &mfmt1);
+//
+//	normalized_fft<double>(mat1, mat1);
+//	center_shift<double>(mat1, mat1);
+//	frequency_domain_density<double>(mat1, 25.0, SmartIntArray(1, (int[]){36}), mat2);
+//
+//	print_mat_details_g<double, 2>(mat2, 2, "Test-Data/density.txt");
+
+	Media_Format mfmt1, mfmt2;
+	Mat_<Vec<double, 2> > mat1, mat2;
+	load_as_tensor<double>("Test-Data/Barbara512.png", mat1, &mfmt1);
+
+//	conv_by_separable_kernels_and_ds<double>(mat1, SmartArray<OneD_TD_Filter<double> >(), false, mat1);
+
+	normalized_fft<double>(mat1, mat1);
+	center_shift<double>(mat1, mat1);
+	save_as_media<double>("Test-Data/Barbara-fft.png", mat1, NULL);
+
+	frequency_domain_density<double>(mat1, 30, SmartIntArray(1, (int[]){90}), mat2);
+
+	print_mat_details_g<double, 2>(mat2, 0, "Test-Data/Barbara-density.txt");
+
+	 double d0, d1;
+	 minMaxLoc(mat2, &d0, &d1);
+	 mat2.convertTo(mat2, -1, 255.0 / (d1 - d0), -255.0 * d0 / (d1 - d0));
+	 mat2 = Scalar(255,0) - mat2;
+
+	save_as_media<double>("Test-Data/Barbara-density.png", mat2, NULL);
+
+	return 0;
+}
+
+int Unit_Test::comp_supp_test(int argc, char **argv)
+{
+	Media_Format mfmt1, mfmt2;
+	Mat_<Vec<double, 2> > mat1, mat2, mat3;
+	load_as_tensor<double>("Test-Data/benchmark/coastguard192.avi", mat1, &mfmt1);
+
+	Mat_<Vec<double, 2> > w1(2, (int[]){1, 2}, Vec<double, 2>(0,0));
+	Mat_<Vec<double, 2> > w2(2, (int[]){1, 2}, Vec<double, 2>(0,0));
+	Mat_<Vec<double, 2> > w3(2, (int[]){1, 2}, Vec<double, 2>(0,0));
+	Mat_<Vec<double, 2> > w4(2, (int[]){1, 2}, Vec<double, 2>(0,0));
+	double r = sqrt(2);
+	w1(0,0)[0] = 1.0 / r;
+	w1(0,1)[0] = 1.0 / r;
+	w2(0,0)[0] = 1.0 / r;
+	w2(0,1)[0] = -1.0 / r;
+
+	w3(0,0)[0] = 1.0 / r;
+	w3(0,1)[0] = 1.0 / r;
+	w4(0,0)[0] = -1.0 / r;
+	w4(0,1)[0] = 1.0 / r;
+
+//	Mat_<Vec<double, 2> > w1(2, (int[]){1, 4}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w2(2, (int[]){1, 4}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w3(2, (int[]){1, 4}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w4(2, (int[]){1, 4}, Vec<double, 2>(0,0));
+//	w1(0,0)[0] = -0.129409522550921;
+//	w1(0,1)[0] = 0.224143868041857;
+//	w1(0,2)[0] = 0.836516303737469;
+//	w1(0,3)[0] =  0.482962913144690;
+//	w2(0,0)[0] = -0.482962913144690;
+//	w2(0,1)[0] =  0.836516303737469;
+//	w2(0,2)[0] = -0.224143868041857;
+//	w2(0,3)[0] =  -0.129409522550921;
+//
+//	w3(0,0)[0] = 0.482962913144690;
+//	w3(0,1)[0] = 0.836516303737469;
+//	w3(0,2)[0] =  0.224143868041857;
+//	w3(0,3)[0] =  -0.129409522550921;
+//	w4(0,0)[0] = -0.129409522550921;
+//	w4(0,1)[0] =  -0.224143868041857;
+//	w4(0,2)[0] =  0.836516303737469;
+//	w4(0,3)[0] = -0.482962913144690;
+
+
+	int nlevels = 5;
+	int ndims = 3;
+	ML_MD_TD_FSystem<double> ml_md_fs(nlevels,ndims);
+	ML_MD_TD_FSystem<double> ml_md_fs2(nlevels,ndims);
+
+	for (int i = 0; i < nlevels; i++)
 	{
-		for (int j = 0; j < mat.size[1]; ++j)
+		for (int j = 0; j < ndims; j++)
 		{
-			for (int k = 0; k < mat.size[2]; ++k)
-			{
-				mat(i,j,k)[0] = 1;
-			}
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters = SmartArray<OneD_TD_Filter<double> >(3);
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].ds_folds = SmartIntArray(3, 2);
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].flags = SmartArray<unsigned int>(2);
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].flags[0] = LOWPASS_FILTER;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].flags[1] = HIGHPASS_FILTER;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].flags[2] = LOWPASS_FILTER2;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[0].coefs = w1;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[0].anchor = 0;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[1].coefs = w2;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[1].anchor = 0;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[2].coefs = w1;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[2].anchor = 0;
+
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters = SmartArray<OneD_TD_Filter<double> >(3);
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].ds_folds = SmartIntArray(3, 2);
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].flags = SmartArray<unsigned int>(2);
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].flags[0] = LOWPASS_FILTER;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].flags[1] = HIGHPASS_FILTER;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].flags[2] = LOWPASS_FILTER2;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[0].coefs = w3;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[0].anchor = 1;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[1].coefs = w4;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[1].anchor = 1;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[2].coefs = w3;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[2].anchor = 1;
+
+
 		}
 	}
 
 
-	print_mat_details_g<double, 2>(mat, 2, "Test-Data/output/origin_mat.txt");
-	cout << endl << endl;
+	ML_MC_TD_Coefs_Set<double>::type coefs_set;
+	ML_MC_TD_Filter_Norms_Set<double>::type norms_set;
 
+	string msg;
+	clock_t s0 = tic(), s1;
+	decompose_in_time_domain<double>(ml_md_fs, mat1, true, norms_set, coefs_set);
+	s1 = tic();
+	msg = show_elapse(s1 - s0);
+	cout << "Dec: " << endl << msg << endl;
+//	for (int i = 0; i < (int)coefs_set.size(); ++i)
+//	{
+//		for (int j = 0; j < (int)coefs_set[i].size(); ++j)
+//		{
+//			stringstream ss;
+//			ss << "Test-Data/output/coef-" << i <<"-" <<j << ".png";
+//			save_as_media<double>(ss.str(), coefs_set[i][j].coefs, NULL);
+//		}
+//	}
+
+	Mat_<Vec<double, 2> > rec;
+	reconstruct_in_time_domain<double>(ml_md_fs2, coefs_set, true, rec);
+	s0 = tic();
+	msg = show_elapse(s0 - s1);
+	cout << "Rec: " << endl << msg << endl;
+	double score, msr;
+	psnr<double>(mat1, rec, score, msr);
+	cout << "PSNR: score: " << score << ", msr: " << msr << endl;
+
+//	save_as_media<double>("Test-Data/output/comp-supp-rec.png", rec, NULL);
+	return 0;
+}
+
+int Unit_Test::performance_test(int argc, char **argv)
+{
+
+
+	const int M = 10*1024, N = 1024;
+	const int step = N*2;
+	double r = sqrt(2);
+	double skerns[2*2] = {1/r,0, 1/r,0};
+//	double mat[M][N*2], mat2[M][N*2], mat3[M][N*2];
+//	double kernels[M][N*2];
+	double *mat, *mat2, *mat3;
+	double *kernels;
+
+	mat = new double[M*N*2];
+	mat2 = new double[M*N*2];
+	mat3 = new double[M*N*2];
+	kernels = new double[M*N*2];
+	memset(kernels, 0, sizeof(double) * 2 * M * N);
+	kernels[0] = 1/r;
+	kernels[1] = 0;
+	kernels[2] = 1 / r;
+	kernels[3] = 0;
+
+	for (int i = 0; i < M; ++i)
 	{
-	SmartIntArray border(3, 5);
-	mat_border_extension(mat, border, "blk", mat);
-	print_mat_details_g<double, 2>(mat, 2, "Test-Data/output/ext_mat.txt");
+		for (int j = 0; j < N; ++j)
+		{
+			mat[i*step + j*2] = rand();
+			mat[i*step + j*2 + 1] = 0;
+		}
 	}
 
-//    Mat_<Vec<double, 2> > filter(3, (int[]){3,3,3}, Vec<double, 2>(1.0/27.0,0));
-//    SmartIntArray achor(3, 1);
-//    md_filtering<double>(mat, filter, achor, mat);
-//    print_mat_details_g<double, 2>(mat, 2, "Test-Data/output/conv.txt");
+	clock_t t0, t1;
+	string msg;
+	t0 = tic();
+	for (int i = 0; i < M; ++i)
+	{
+		for (int j = 0; j < N; ++j)
+		{
 
-//    pw_abs<double>(mat, mat);
-//    cout << endl << "Abs: " << endl;
-//    print_mat_details_g<double,2>(mat, 2);
+			double sum = 0.0;
+			for (int k = 0; k < 2; ++k)
+			{
+				int good_j = j - k;
+				if (good_j < 0)
+				{
+					good_j += N;
+				}
+				else if (good_j >= N)
+				{
+					good_j -= N;
+				}
+				sum += mat[i*step + good_j*2] * skerns[k*2];
+			}
+			mat2[i*step + j*2] = sum;
+			mat2[i*step + j*2+1] = 0;
+		}
+	}
+	for (int j = 0; j < N; ++j)
+	{
+		for (int i = 0; i < M; ++i)
+		{
+
+			double sum = 0.0;
+			for (int k = 0; k < 2; ++k)
+			{
+				int good_i = i - k;
+				if (good_i < 0)
+				{
+					good_i += M;
+				}
+				else if (good_i >= M)
+				{
+					good_i -= M;
+				}
+				sum += mat2[good_i * step + j*2] * skerns[k*2];
+			}
+			mat3[i*step + j*2] = sum;
+			mat3[i*step + j*2+1] = 0;
+		}
+	}
+	t1 = tic();
+	msg = show_elapse(t1 - t0);
+	cout << "Plain: " << endl << msg << endl;
+
+	//////////////////
+
+	fftw_complex *before;
+	fftw_complex *after;
+	fftw_plan plan;
+
+	t0 = tic();
+
+
+	before = reinterpret_cast<fftw_complex *>(mat);
+	after = reinterpret_cast<fftw_complex *>(mat2);
+	// Here we can only use 'FFTW_ESTIMATE', because 'FFTW_MEASURE' would touch 'before'.
+	plan = fftw_plan_dft(2, (int[]){M,N}, before, after, FFTW_FORWARD, FFTW_ESTIMATE);
+	fftw_execute(plan);
+	fftw_destroy_plan(plan);
+
+	before = reinterpret_cast<fftw_complex *>(kernels);
+	after = reinterpret_cast<fftw_complex *>(mat3);
+	// Here we can only use 'FFTW_ESTIMATE', because 'FFTW_MEASURE' would touch 'before'.
+	plan = fftw_plan_dft(2, (int[]){M,N}, before, after, FFTW_FORWARD, FFTW_ESTIMATE);
+	fftw_execute(plan);
+	fftw_destroy_plan(plan);
+
+	for (int i = 0; i < M; ++i)
+	{
+		for (int j = 0; j < N; ++j)
+		{
+			mat3[i*step + j*2] = mat3[i*step + j*2] * kernels[i*step + j*2] - mat3[i*step + j*2+1]*kernels[i*step + j*2+1];
+			mat3[i*step + j*2+1] = mat3[i*step + j*2] * kernels[i*step + j*2+1] + mat3[i*step + j*2+1]*kernels[i*step + j*2];
+		}
+	}
+
+	before = reinterpret_cast<fftw_complex *>(mat3);
+	after = reinterpret_cast<fftw_complex *>(mat3);
+	// Here we can only use 'FFTW_ESTIMATE', because 'FFTW_MEASURE' would touch 'before'.
+	plan = fftw_plan_dft(2, (int[]){M,N}, before, after, FFTW_BACKWARD, FFTW_ESTIMATE);
+	fftw_execute(plan);
+	fftw_destroy_plan(plan);
+
+	t1 = tic();
+	msg = show_elapse(t1 - t0);
+	cout << "FFT: " << endl << msg << endl;
 
 	return 0;
 }

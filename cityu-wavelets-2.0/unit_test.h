@@ -13,6 +13,11 @@ public:
 	static int denoising(int argc, char **argv);
 	static int psnr_test(int argc, char **argv);
 	static int test_any(int argc, char **argv);
+	static int conv_and_ds_test(int argc, char **argv);
+	static int conv_and_us_test(int argc, char **argv);
+	static int comp_supp_test(int argc, char **argv);
+
+	static int performance_test(int argc, char **argv);
 };
 
 #endif

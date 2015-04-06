@@ -303,7 +303,7 @@ int thresholding_denoise(const Mat_<Vec<_Tp, 2> > &noisy_input, const ML_MD_FS_P
 	decompose_by_ml_md_filter_bank2<_Tp>(fs_param, ext_input, filter_system, norms_set, coefs_set);
 	clock_t t1 = tic();
 	string msg = show_elapse(t1 - t0);
-//	cout << endl << "Dec Time: " << endl << msg << endl;
+	cout << endl << "Dec Time: " << endl << msg << endl;
 	ext_input.release();
 
 //	cout << "Filter Norms: " << endl;
@@ -344,7 +344,7 @@ int thresholding_denoise(const Mat_<Vec<_Tp, 2> > &noisy_input, const ML_MD_FS_P
 	reconstruct_by_ml_md_filter_bank2<_Tp>(fs_param, filter_system, new_coefs_set, rec);
 	t1 = tic();
 	msg = show_elapse(t1 - t0);
-//	cout << "Rec Time: " << endl << msg << endl;
+	cout << "Rec Time: " << endl << msg << endl;
 
 	mat_border_extension<_Tp>(rec, better_ext_border, "cut", rec);
 	output = rec;

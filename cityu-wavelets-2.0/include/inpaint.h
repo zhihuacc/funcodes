@@ -16,6 +16,8 @@ struct Inpainting_Param
 	int 	sigma_num;
 	vector<double> sigmas;
 	int 	phase1_end;
+	vector<int> phase_ends;
+	vector<double> epsilons;
 	double 	epsilon1;
 	double 	epsilon2;
 	double 	noise_sigma;
@@ -53,46 +55,31 @@ int inpaint(const Mat_<Vec<_Tp, 2> > &mat, const Mat_<Vec<_Tp, 2> > &mask, const
 	last_restored = cur_restored;
 	for (int iter = 0; iter < param.max_iter && sigma_id < param.sigma_num; ++iter)
 	{
-		cout << endl << "Iter ********** " << iter << ", sigma_id " << sigma_id << ", sigma " << param.sigmas[sigma_id] << endl;
+//		cout << endl << "Iter ********** " << iter << ", sigma_id " << sigma_id << ", sigma " << param.sigmas[sigma_id] << endl;
 
 		thresholding_denoise<_Tp>(merged_restored, param.fs_params[sigma_id], param.thr_params[sigma_id], cur_restored);
 		pw_abs<_Tp>(cur_restored, cur_restored);
 
-//			stringstream ss;
-//		ss << "Test-Data/output/merged_" << sigma_id << "-" << iter << ".txt";
-//		print_mat_details_g<FLOAT_TYPE, 2>(merged_restored, 2, ss.str());
-
 		merged_restored = rmask.mul(cur_restored) + noisy_masked_mat;
-
-//		psnr<_Tp>(clean_mat, merged_restored, score, msr);
-//		cout << "sigma: " << stdev[sigma_id] << ", psnr: " << score << ", msr: " << msr << endl;
-
-//			ss.str("");
-//			ss << "Test-Data/output/merged_restored_" << sigma_id << "-" << iter << ".png";
-//			save_as_media<FLOAT_TYPE>(ss.str(), merged_restored, &mfmt);
-//			print_mat_details_g<FLOAT_TYPE, 2>(cur_restored, 2, ss.str());//		save_as_media<FLOAT_TYPE>(ss.str(), merged_restored, &mfmt);
 
 		//-- test error
 
 		double err = l2norm<_Tp>(rmask.mul(last_restored - cur_restored));
 		last_restored = cur_restored;
 
-		cout << "py: " << py << ", err: " << err;
+//		cout << "py: " << py << ", err: " << err;
 		err /= py;
-		cout << ", err/py: " << err << endl;
-		if (sigma_id < param.phase1_end)
+//		cout << ", err/py: " << err << endl;
+
+		int pn = 0;
+		while (sigma_id >= param.phase_ends[pn])
 		{
-			if (err < param.epsilon1)
-			{
-				++sigma_id;
-			}
+			++pn;
 		}
-		else if (param.phase1_end <= sigma_id && sigma_id < param.sigma_num)
+
+		if (err < param.epsilons[pn])
 		{
-			if (err < param.epsilon2)
-			{
-				++sigma_id;
-			}
+			++sigma_id;
 		}
 		//--
 	}
@@ -108,6 +95,88 @@ int inpaint(const Mat_<Vec<_Tp, 2> > &mat, const Mat_<Vec<_Tp, 2> > &mask, const
 	{
 		mat_border_extension<_Tp>(cur_restored, border, "cut", cur_restored);
 	}
+
+	res = cur_restored;
+	return 0;
+}
+
+template<typename _Tp>
+int inpaint2(const Mat_<Vec<_Tp, 2> > &mat, const Mat_<Vec<_Tp, 2> > &mask, const Inpainting_Param &param, Mat_<Vec<_Tp, 2> > &res)
+{
+	Mat_<Vec<_Tp, 2> > noisy_masked_mat, rmask;
+	int ndims = mat.dims;
+
+	noisy_masked_mat = mat.mul(mask);
+	double py = l2norm<_Tp>(noisy_masked_mat);
+
+//	save_as_media<_Tp>("Test-Data/output/masked.avi", noisy_masked_mat, NULL);
+
+	SmartIntArray border(ndims, param.ext_size);
+	mat_border_extension(noisy_masked_mat, border, param.ext_method, noisy_masked_mat);
+
+	rmask = Scalar(1.0,0) - mask;
+	mat_border_extension(rmask, border, param.ext_method, rmask);
+
+	Mat_<Vec<_Tp, 2> > last_restored, merged_restored,
+				       cur_restored(ndims, noisy_masked_mat.size, Vec<_Tp, 2>(0,0));
+
+	int sigma_id = 0;
+	merged_restored = rmask.mul(cur_restored) + noisy_masked_mat;
+
+	//
+	Thresholding_Param deno_param = param.thr_params[0];
+	deno_param.stdev = param.noise_sigma;
+	thresholding_denoise<_Tp>(merged_restored, param.fs_params[0], deno_param, merged_restored);
+	noisy_masked_mat = merged_restored.mul(Scalar(1.0,0) - rmask);
+	//
+
+	last_restored = cur_restored;
+	for (int iter = 0; iter < param.max_iter && sigma_id < param.sigma_num; ++iter)
+	{
+//		cout << endl << "Iter ********** " << iter << ", sigma_id " << sigma_id << ", sigma " << param.sigmas[sigma_id] << endl;
+
+		thresholding_denoise<_Tp>(merged_restored, param.fs_params[sigma_id], param.thr_params[sigma_id], cur_restored);
+		pw_abs<_Tp>(cur_restored, cur_restored);
+
+		merged_restored = rmask.mul(cur_restored) + noisy_masked_mat;
+
+		//-- test error
+
+		double err = l2norm<_Tp>(rmask.mul(last_restored - cur_restored));
+		last_restored = cur_restored;
+
+//		cout << "py: " << py << ", err: " << err;
+		err /= py;
+//		cout << ", err/py: " << err << endl;
+
+		int pn = 0;
+		while (sigma_id >= param.phase_ends[pn])
+		{
+			++pn;
+		}
+
+		if (err < param.epsilons[pn])
+		{
+			++sigma_id;
+		}
+		//--
+	}
+
+//	if (fabs(param.noise_sigma - 0) < numeric_limits<_Tp>::epsilon())
+//	{
+//		//
+//		cur_restored = rmask.mul(cur_restored);
+//		mat_border_extension<_Tp>(cur_restored, border, "cut", cur_restored);
+//		cur_restored += mat.mul(mask);
+//	}
+//	else
+//	{
+//		mat_border_extension<_Tp>(cur_restored, border, "cut", cur_restored);
+//	}
+
+	cur_restored = rmask.mul(cur_restored);
+	cur_restored += noisy_masked_mat;
+	mat_border_extension<_Tp>(cur_restored, border, "cut", cur_restored);
 
 	res = cur_restored;
 	return 0;
@@ -133,31 +202,53 @@ int batch_inpaint(const Configuration *cfg, const string &top_scope)
 
 
 	const char **sigma_list, **param_list;
-	int sigma_num, param_num;
-	sigma_num = cfg->lookupInt(top_scope.c_str(), "phase2_end");
-	cfg->lookupList(top_scope.c_str(), "params", param_list, param_num);
-	if (sigma_num != param_num)
+	int param_num;
+
+	const char **phase_ends_list, **epsilons_list;
+	int phases_num, epsilons_num;
+	cfg->lookupList(top_scope.c_str(), "phase_ends", phase_ends_list, phases_num);
+	cfg->lookupList(top_scope.c_str(), "epsilons", epsilons_list, epsilons_num);
+	if (phases_num != epsilons_num)
 	{
+		cout << "phase_ends dont match epsilons." << endl;
 		return 0;
 	}
 
-	param.sigma_num = sigma_num;
-	param.sigmas.reserve(sigma_num);
-	param.sigmas.resize(sigma_num);
-	param.fs_params.reserve(sigma_num);
-	param.fs_params.resize(sigma_num);
-	param.thr_params.reserve(sigma_num);
-	param.thr_params.resize(sigma_num);
+	param.phase_ends.reserve(phases_num);
+	param.phase_ends.resize(phases_num);
+	param.epsilons.reserve(epsilons_num);
+	param.epsilons.resize(phases_num);
 
-	param.phase1_end = cfg->lookupInt(top_scope.c_str(), "phase1_end");
-	param.epsilon1 = cfg->lookupFloat(top_scope.c_str(), "epsilon1");
-	param.epsilon2 = cfg->lookupFloat(top_scope.c_str(), "epsilon2");
+	for (int i = 0; i < phases_num; ++i)
+	{
+		stringstream ss;
+		ss << "phase_ends[" << i + 1 << "]";
+		param.phase_ends[i] = cfg->stringToInt("", ss.str().c_str(), phase_ends_list[i]);
+
+		ss.str("");
+		ss << "epsilons[" << i + 1 << "]";
+		param.epsilons[i] = cfg->stringToFloat("", ss.str().c_str(), epsilons_list[i]);
+	}
+	param.sigma_num = param.phase_ends[phases_num - 1];
+	param.sigmas.reserve(param.sigma_num);
+	param.sigmas.resize(param.sigma_num);
+	param.fs_params.reserve(param.sigma_num);
+	param.fs_params.resize(param.sigma_num);
+	param.thr_params.reserve(param.sigma_num);
+	param.thr_params.resize(param.sigma_num);
 
 	string sigma_method( cfg->lookupString(top_scope.c_str(), "sigma_method") );
 	if (sigma_method == "manul")
 	{
+		int sigma_num;
 		cfg->lookupList(top_scope.c_str(), "sigmas", sigma_list, sigma_num);
-		for (int i = 0; i < param_num; ++i)
+		if (sigma_num != param.sigma_num)
+		{
+			cout << "sigmas' length is wrong." << endl;
+			return 0;
+		}
+
+		for (int i = 0; i < sigma_num; ++i)
 		{
 			stringstream ss;
 			ss << "sigmas[" << i + 1 << "]";
@@ -170,6 +261,12 @@ int batch_inpaint(const Configuration *cfg, const string &top_scope)
 
 	param.ext_size = cfg->lookupInt(top_scope.c_str(), "ext_size");
 	param.ext_method = cfg->lookupString(top_scope.c_str(), "ext_method");
+
+	cfg->lookupList(top_scope.c_str(), "params", param_list, param_num);
+	if (param.sigma_num != param_num)
+	{
+		return 0;
+	}
 
 	for (int f = 0; f < fnum; ++f)
 	{
@@ -187,7 +284,8 @@ int batch_inpaint(const Configuration *cfg, const string &top_scope)
 		{
 			double ratio = mean(mask)(0);
 			param.sigmas.clear();
-			figure_good_sigmas(param.noise_sigma, ratio, param.phase1_end, param.sigma_num - param.phase1_end, param.sigmas);
+//			figure_good_sigmas(param.noise_sigma, ratio, param.phase1_end, param.sigma_num - param.phase1_end, param.sigmas);
+			figure_good_sigmas(param.noise_sigma, ratio, param.phase_ends[0], param.sigma_num - param.phase_ends[0], param.sigmas);
 		}
 
 		int ndims = clean_mat.dims;
@@ -228,16 +326,17 @@ int batch_inpaint(const Configuration *cfg, const string &top_scope)
 		channels[0].release();
 		channels[1].release();
 
-//		write_mat_dat<_Tp, 2>(noisy_masked_mat, "Test-Data/output/noises90.dat");
+//		write_mat_dat<_Tp, 2>(noisy_masked_mat, "Test-Data/output/noises5.dat");
 		noisy_masked_mat += clean_mat;
 		// --
 
-		inpaint<_Tp>(noisy_masked_mat, mask, param, res);
+//		inpaint<_Tp>(noisy_masked_mat, mask, param, res);
+		inpaint2<_Tp>(noisy_masked_mat, mask, param, res);
 
-//		save_as_media<_Tp>("Test-Data/output/restored.avi", res, &mfmt);
 		double score, msr;
 		psnr<_Tp>(clean_mat, res, score, msr);
-		cout << endl << "Done sigma: " << ", psnr: " << score << ", msr: " << msr << endl;
+//		cout << endl << "Done " << fname << "," << fmask << " noise sigma: "  << param.noise_sigma << ", psnr: " << score << ", msr: " << msr << endl;
+		cout << score << endl;
 
 	}
 	return 0;
