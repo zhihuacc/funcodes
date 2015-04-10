@@ -13,10 +13,6 @@ struct OneD_TD_Filter
 {
 	Mat_<Vec<_Tp, 2> > 	coefs;
 	int 				anchor;
-//	int 				highpass_ds_fold;
-//	int 				lowpass_ds_fold;
-//	bool 				is_lowpass;
-//	unsigned int 		flags;
 
 	OneD_TD_Filter():anchor(0) {}
 };
@@ -27,7 +23,6 @@ struct OneD_TD_FSystem
 
 	SmartArray<OneD_TD_Filter<_Tp> >	filters;
 	SmartIntArray	ds_folds;
-//	int				lowpass_ds_fold;
 	SmartArray<unsigned int> flags;
 
 	OneD_TD_FSystem(){}
@@ -51,10 +46,10 @@ struct ML_MD_TD_FSystem
 	int nlevels;
 	int ndims;
 	SmartArray<MD_TD_FSystem<_Tp> > md_fs_at_level;
-	bool isSym;
 
-	ML_MD_TD_FSystem(): nlevels(0), ndims(0), isSym(false) {}
-	ML_MD_TD_FSystem(int lvl, int d): nlevels(lvl), ndims(d), isSym(false)
+
+	ML_MD_TD_FSystem(): nlevels(0), ndims(0) {}
+	ML_MD_TD_FSystem(int lvl, int d): nlevels(lvl), ndims(d)
 	{
 		md_fs_at_level.reserve(nlevels);
 		for (int i = 0; i < nlevels; ++i)
@@ -68,7 +63,6 @@ template <typename _Tp>
 struct Coefs_Item
 {
 	Mat_<Vec<_Tp, 2> > coefs;
-//	SmartIntArray		ds_fold;
 	bool is_lowpass;
 	Coefs_Item():is_lowpass(false) {};
 	Coefs_Item(const Mat_<Vec<_Tp, 2> > &c, bool b):coefs(c), is_lowpass(b) {};
@@ -99,6 +93,227 @@ struct ML_MC_TD_Filter_Norms_Set
 {
 	typedef vector<vector<_Tp> > type;
 };
+
+//template<typename _Tp>
+//int conv_by_separable_kernels(const Mat_<Vec<_Tp, 2> > &mat, const SmartArray<OneD_TD_Filter<_Tp> > &skerns, bool is_real, Mat_<Vec<_Tp, 2> > &output)
+//{
+//	int ndims = mat.dims;
+//	if (ndims != skerns.size())
+//	{
+//		return -1;
+//	}
+//
+//	if (is_real == false)
+//	{
+//
+//		Mat_<Vec<_Tp, 2> > src, dst;
+//
+//		src = mat.clone();
+//		dst = Mat_<Vec<_Tp, 2> >(src.dims, src.size, Vec<_Tp, 2>(0,0));
+//		for (int d = 0; d < ndims; ++d)
+//		{
+//			SmartIntArray start_pos(ndims);
+//			SmartIntArray cur_pos(ndims);
+//			SmartIntArray this_dim_pos(ndims);
+//			SmartIntArray step(ndims, 1);
+//			SmartIntArray range(ndims, mat.size);
+//			step[d] = range[d];
+//			{
+//				int src_dims;
+//				SmartIntArray src_start_pos;
+//				SmartIntArray src_cur_pos;
+//				SmartIntArray src_step;
+//				SmartIntArray src_end_pos;
+//
+//				//User-Defined initialization
+//				src_dims = ndims;
+//				src_start_pos = start_pos;
+//				src_cur_pos = cur_pos;
+//				src_step = step;
+//				src_end_pos = range;
+//				//--
+//
+//				int cur_dim = src_dims - 1;
+//				while(true)
+//				{
+//					while (cur_dim >= 0 && src_cur_pos[cur_dim] >= src_end_pos[cur_dim])
+//					{
+//						src_cur_pos[cur_dim] = src_start_pos[cur_dim];
+//						--cur_dim;
+//						if (cur_dim >= 0)
+//						{
+//							src_cur_pos[cur_dim] += src_step[cur_dim];
+//							continue;
+//						}
+//					}
+//					if (cur_dim < 0)
+//					{
+//						break;
+//					}
+//
+//					//User-Defined actions
+//					int N = src.size[d];
+//					const Mat_<Vec<_Tp, 2> > &kern = skerns[d].coefs;
+//					int M = kern.total();
+////					SmartIntArray this_dim_pos = src_cur_pos.clone();
+//					cur_pos.copy(this_dim_pos);
+//					int anchor = skerns[d].anchor;
+//					for (int i = 0; i < N; ++i)
+//					{
+//						complex<_Tp> sum = 0;
+//						for (int j = 0; j < M; ++j)
+//						{
+//							int idx = i + anchor -j;
+//							complex<_Tp> val = 0.0;
+//							{
+//								if (idx < 0)
+//								{
+//									idx += range[d];
+//								}
+//								else if (idx >= range[d])
+//								{
+//									idx -= range[d];
+//								}
+//								this_dim_pos[d] = idx;
+//								val = src.template at<_Tp>(this_dim_pos);
+//							}
+//							// Zero-padding
+////							{
+////								if (idx < 0 || idx >= range[d])
+////								{
+////									val = 0;
+////								}
+////								else
+////								{
+////									this_dim_pos[d] = idx;
+////									val = src.template at<complex<_Tp> >(this_dim_pos);
+////								}
+////							}
+//							sum += (kern.template at<complex<_Tp> >(j) * val);
+//						}
+//						this_dim_pos[d] = i;
+//						dst.template at<complex<_Tp> >(this_dim_pos) = sum;
+//					}
+//					//--
+//
+//					cur_dim = src_dims - 1;
+//					src_cur_pos[cur_dim] += src_step[cur_dim];
+//				}
+//			}
+//
+//			Mat_<Vec<_Tp, 2> > tmp = src;
+//			src = dst;
+//			dst = tmp;
+//		}
+//		output = src;
+//	}
+//	else if (is_real == true)
+//	{
+//		Mat_<Vec<_Tp, 2> > src, dst;
+//
+//		src = mat.clone();
+//		dst = Mat_<Vec<_Tp, 2> >(src.dims, src.size, Vec<_Tp, 2>(0,0));
+//		for (int d = 0; d < ndims; ++d)
+//		{
+//			SmartIntArray start_pos(ndims);
+//			SmartIntArray cur_pos(ndims);
+//			SmartIntArray this_dim_pos(ndims);
+//			SmartIntArray step(ndims, 1);
+//			SmartIntArray range(ndims, mat.size);
+//			step[d] = range[d];
+//			{
+//				int src_dims;
+//				SmartIntArray src_start_pos;
+//				SmartIntArray src_cur_pos;
+//				SmartIntArray src_step;
+//				SmartIntArray src_end_pos;
+//
+//				//User-Defined initialization
+//				src_dims = ndims;
+//				src_start_pos = start_pos;
+//				src_cur_pos = cur_pos;
+//				src_step = step;
+//				src_end_pos = range;
+//				//--
+//
+//				int cur_dim = src_dims - 1;
+//				while(true)
+//				{
+//					while (cur_dim >= 0 && src_cur_pos[cur_dim] >= src_end_pos[cur_dim])
+//					{
+//						src_cur_pos[cur_dim] = src_start_pos[cur_dim];
+//						--cur_dim;
+//						if (cur_dim >= 0)
+//						{
+//							src_cur_pos[cur_dim] += src_step[cur_dim];
+//							continue;
+//						}
+//					}
+//					if (cur_dim < 0)
+//					{
+//						break;
+//					}
+//
+//					//User-Defined actions
+//					int N = src.size[d];
+//					const Mat_<Vec<_Tp, 2> > &kern = skerns[d].coefs;
+//					int M = kern.total();
+////					SmartIntArray this_dim_pos = src_cur_pos.clone();
+//					cur_pos.copy(this_dim_pos);
+//					int anchor = skerns[d].anchor;
+//					for (int i = 0; i < N; ++i)
+//					{
+//						_Tp sum = 0;
+//						for (int j = 0; j < M; ++j)
+//						{
+//							int idx = i + anchor -j;
+//							_Tp val = 0.0;
+//							{
+//								if (idx < 0)
+//								{
+//									idx += range[d];
+//								}
+//								else if (idx >= range[d])
+//								{
+//									idx -= range[d];
+//								}
+//								this_dim_pos[d] = idx;
+//								val = src.template at<_Tp >(this_dim_pos);
+//							}
+//							// Zero-padding
+////							{
+////								if (idx < 0 || idx >= range[d])
+////								{
+////									val = 0;
+////								}
+////								else
+////								{
+////									this_dim_pos[d] = idx;
+////									val = src.template at<Vec<_Tp, 2> >(this_dim_pos)[0];
+////								}
+////							}
+//							sum += (kern.template at<_Tp >(j << 1) * val);
+//						}
+//						this_dim_pos[d] = i;
+//						dst.template at<Vec<_Tp, 2> >(this_dim_pos) = Vec<_Tp, 2>(sum,0);
+//
+//					}
+//					//--
+//
+//					cur_dim = src_dims - 1;
+//					src_cur_pos[cur_dim] += src_step[cur_dim];
+//				}
+//			}
+//
+//			Mat_<Vec<_Tp, 2> >	tmp = src;
+//			src = dst;
+//			dst = tmp;
+//		}
+//		output = src;
+//	}
+//
+//	return 0;
+//}
 
 template<typename _Tp>
 int conv_by_separable_kernels(const Mat_<Vec<_Tp, 2> > &mat, const SmartArray<OneD_TD_Filter<_Tp> > &skerns, bool is_real, Mat_<Vec<_Tp, 2> > &output)
@@ -161,44 +376,33 @@ int conv_by_separable_kernels(const Mat_<Vec<_Tp, 2> > &mat, const SmartArray<On
 					int N = src.size[d];
 					const Mat_<Vec<_Tp, 2> > &kern = skerns[d].coefs;
 					int M = kern.total();
-//					SmartIntArray this_dim_pos = src_cur_pos.clone();
 					cur_pos.copy(this_dim_pos);
 					int anchor = skerns[d].anchor;
+					complex<_Tp> *pkern = (complex<_Tp>*)(kern.data);
+					complex<_Tp> *psrow = (complex<_Tp>*)(&(src(cur_pos)));
+					complex<_Tp> *pdrow = (complex<_Tp>*)(&(dst(cur_pos)));
+					int stride = src.step[d] / sizeof(complex<_Tp>);
+					int this_dim_end = range[d];
 					for (int i = 0; i < N; ++i)
 					{
 						complex<_Tp> sum = 0;
 						for (int j = 0; j < M; ++j)
 						{
 							int idx = i + anchor -j;
-							complex<_Tp> val = 0.0;
 							{
 								if (idx < 0)
 								{
-									idx += range[d];
+									idx += this_dim_end;
 								}
-								else if (idx >= range[d])
+								else if (idx >= this_dim_end)
 								{
-									idx -= range[d];
+									idx -= this_dim_end;
 								}
-								this_dim_pos[d] = idx;
-								val = src.template at<_Tp>(this_dim_pos);
 							}
-							// Zero-padding
-//							{
-//								if (idx < 0 || idx >= range[d])
-//								{
-//									val = 0;
-//								}
-//								else
-//								{
-//									this_dim_pos[d] = idx;
-//									val = src.template at<complex<_Tp> >(this_dim_pos);
-//								}
-//							}
-							sum += (kern.template at<complex<_Tp> >(j) * val);
+
+							sum += pkern[j] * (*(psrow + idx*stride));
 						}
-						this_dim_pos[d] = i;
-						dst.template at<complex<_Tp> >(this_dim_pos) = sum;
+						*(pdrow + i*stride) = sum;
 					}
 					//--
 
@@ -264,44 +468,32 @@ int conv_by_separable_kernels(const Mat_<Vec<_Tp, 2> > &mat, const SmartArray<On
 					int N = src.size[d];
 					const Mat_<Vec<_Tp, 2> > &kern = skerns[d].coefs;
 					int M = kern.total();
-//					SmartIntArray this_dim_pos = src_cur_pos.clone();
 					cur_pos.copy(this_dim_pos);
 					int anchor = skerns[d].anchor;
+					_Tp *pkern = (_Tp*)(kern.data);
+					_Tp *psrow = (_Tp*)(&(src(cur_pos)));
+					_Tp *pdrow = (_Tp*)(&(dst(cur_pos)));
+					int stride = src.step[d] / sizeof(_Tp);
+					int this_dim_end = range[d];
 					for (int i = 0; i < N; ++i)
 					{
 						_Tp sum = 0;
 						for (int j = 0; j < M; ++j)
 						{
 							int idx = i + anchor -j;
-							_Tp val = 0.0;
 							{
 								if (idx < 0)
 								{
-									idx += range[d];
+									idx += this_dim_end;
 								}
-								else if (idx >= range[d])
+								else if (idx >= this_dim_end)
 								{
-									idx -= range[d];
+									idx -= this_dim_end;
 								}
-								this_dim_pos[d] = idx;
-								val = src.template at<_Tp >(this_dim_pos);
 							}
-							// Zero-padding
-//							{
-//								if (idx < 0 || idx >= range[d])
-//								{
-//									val = 0;
-//								}
-//								else
-//								{
-//									this_dim_pos[d] = idx;
-//									val = src.template at<Vec<_Tp, 2> >(this_dim_pos)[0];
-//								}
-//							}
-							sum += (kern.template at<_Tp >(j << 1) * val);
+							sum += (pkern[j<<1] * psrow[idx*stride]);
 						}
-						this_dim_pos[d] = i;
-						dst.template at<Vec<_Tp, 2> >(this_dim_pos) = Vec<_Tp, 2>(sum,0);
+						pdrow[i*stride] = sum;
 
 					}
 					//--
@@ -311,7 +503,6 @@ int conv_by_separable_kernels(const Mat_<Vec<_Tp, 2> > &mat, const SmartArray<On
 				}
 			}
 
-//			src = dst.clone();
 			Mat_<Vec<_Tp, 2> >	tmp = src;
 			src = dst;
 			dst = tmp;
@@ -526,41 +717,31 @@ int conv_by_separable_kernels_and_ds(const Mat_<Vec<_Tp, 2> > &mat, const SmartA
 					int M = kern.total();
 					cur_pos.copy(this_dim_pos);
 					int anchor = skerns[d].anchor;
-					for (int i = 0; i < N; i += ds_step[d])
+					complex<_Tp> *pkern = (complex<_Tp>*)(kern.data);
+					complex<_Tp> *psrow = (complex<_Tp>*)(&(src(cur_pos)));
+					complex<_Tp> *pdrow = (complex<_Tp>*)(&(dst(cur_pos)));
+					int stride = src.step[d] / sizeof(complex<_Tp>);
+					int this_dim_end = range[d];
+					int ds_step_d = ds_step[d];
+					for (int i = 0; i < N; i += ds_step_d)
 					{
 						complex<_Tp> sum = 0;
 						for (int j = 0; j < M; ++j)
 						{
 							int idx = i + anchor -j;
-							complex<_Tp> val = 0.0;
 							{
 								if (idx < 0)
 								{
-									idx += range[d];
+									idx += this_dim_end;
 								}
-								else if (idx >= range[d])
+								else if (idx >= this_dim_end)
 								{
-									idx -= range[d];
+									idx -= this_dim_end;
 								}
-								this_dim_pos[d] = idx;
-								val = src.template at<_Tp>(this_dim_pos);
 							}
-							// Zero-padding
-//							{
-//								if (idx < 0 || idx >= range[d])
-//								{
-//									val = 0;
-//								}
-//								else
-//								{
-//									this_dim_pos[d] = idx;
-//									val = src.template at<complex<_Tp> >(this_dim_pos);
-//								}
-//							}
-							sum += (kern.template at<complex<_Tp> >(j) * val);
+							sum += pkern[j] * (*(psrow + idx*stride));
 						}
-						this_dim_pos[d] = i;
-						dst.template at<complex<_Tp> >(this_dim_pos) = sum;
+						*(pdrow + i*stride) = sum;
 					}
 					//--
 
@@ -635,42 +816,31 @@ int conv_by_separable_kernels_and_ds(const Mat_<Vec<_Tp, 2> > &mat, const SmartA
 					int M = kern.total();
 					cur_pos.copy(this_dim_pos);
 					int anchor = skerns[d].anchor;
-					for (int i = 0; i < N; i += ds_step[d])
+					_Tp *pkern = (_Tp*)(kern.data);
+					_Tp *psrow = (_Tp*)(&(src(cur_pos)));
+					_Tp *pdrow = (_Tp*)(&(dst(cur_pos)));
+					int stride = src.step[d] / sizeof(_Tp);
+					int this_dim_end = range[d];
+					int ds_step_d = ds_step[d];
+					for (int i = 0; i < N; i += ds_step_d)
 					{
 						_Tp sum = 0;
 						for (int j = 0; j < M; ++j)
 						{
 							int idx = i + anchor -j;
-							_Tp val = 0.0;
 							{
 								if (idx < 0)
 								{
-									idx += range[d];
+									idx += this_dim_end;
 								}
-								else if (idx >= range[d])
+								else if (idx >= this_dim_end)
 								{
-									idx -= range[d];
+									idx -= this_dim_end;
 								}
-								this_dim_pos[d] = idx;
-								val = src.template at<_Tp >(this_dim_pos);
 							}
-							// Zero-padding
-//							{
-//								if (idx < 0 || idx >= range[d])
-//								{
-//									val = 0;
-//								}
-//								else
-//								{
-//									this_dim_pos[d] = idx;
-//									val = src.template at<Vec<_Tp, 2> >(this_dim_pos)[0];
-//								}
-//							}
-							sum += (kern.template at<_Tp >(j << 1) * val);
+							sum += (pkern[j<<1] * psrow[idx*stride]);
 						}
-						this_dim_pos[d] = i;
-						dst.template at<Vec<_Tp, 2> >(this_dim_pos) = Vec<_Tp, 2>(sum,0);
-
+						pdrow[i*stride] = sum;
 					}
 					//--
 
@@ -686,8 +856,13 @@ int conv_by_separable_kernels_and_ds(const Mat_<Vec<_Tp, 2> > &mat, const SmartA
 
 //		t1 = tic();
 //		string msg = show_elapse(t1 - t0);
-//		cout << "conv_and_ds: " << endl << msg << endl;
+//		cout << "conv in ds: " << endl << msg << endl;
+
 		downsample<_Tp>(src, ds_step, output);
+
+//		t0 = tic();
+//		msg = show_elapse(t0 - t1);
+//		cout << "ds in ds: " << endl << msg << endl;
 	}
 
 	return 0;
@@ -697,7 +872,10 @@ template<typename _Tp>
 int conv_by_separable_kernels_and_us(const Mat_<Vec<_Tp, 2> > &mat, const SmartArray<OneD_TD_Filter<_Tp> > &skerns, const SmartIntArray &us_step, bool is_real, Mat_<Vec<_Tp, 2> > &output)
 {
 	int ndims = mat.dims;
-
+	if (output.empty())
+	{
+		return -1;
+	}
 	SmartIntArray start_pos(ndims);
 	SmartIntArray cur_pos(ndims);
 	SmartIntArray step(ndims, 1);
@@ -708,7 +886,7 @@ int conv_by_separable_kernels_and_us(const Mat_<Vec<_Tp, 2> > &mat, const SmartA
 	{
 		upsampled_range[i] = origin_range[i] * us_step[i];
 	}
-	Mat_<Vec<_Tp, 2> > upsampled_mat(ndims, upsampled_range, Vec<_Tp, 2>(0,0));
+//	Mat_<Vec<_Tp, 2> > upsampled_mat(ndims, upsampled_range, Vec<_Tp, 2>(0,0));
 	{
 		int src_dims;
 		SmartIntArray src_start_pos;
@@ -774,10 +952,16 @@ int conv_by_separable_kernels_and_us(const Mat_<Vec<_Tp, 2> > &mat, const SmartA
 			Mat_<Vec<_Tp, 2> >	conv;
 //			clock_t t0, t1;
 //			t0 = tic();
+
 			conv_by_separable_kernels<_Tp>(mat, ds_skerns, is_real, conv);
 //			t1 = tic();
 //			cout << "conv in us: " << endl << show_elapse(t1 - t0) << endl;
-			mat_subadd<_Tp>(upsampled_mat, chosen_index, conv);
+
+
+			mat_subadd<_Tp>(output, chosen_index, conv);
+//			t0 = tic();
+//			cout << "subadd in us: " << endl << show_elapse(t0 - t1) << endl;
+
 			//--
 
 			cur_dim = src_dims - 1;
@@ -785,7 +969,7 @@ int conv_by_separable_kernels_and_us(const Mat_<Vec<_Tp, 2> > &mat, const SmartA
 		}
 	}
 
-	output = upsampled_mat;
+//	output = upsampled_mat;
 
 	return 0;
 }
@@ -1003,8 +1187,8 @@ int reconstruct_in_time_domain(const ML_MD_TD_FSystem<_Tp> &ml_md_fs, const type
 
 //			upsample<_Tp>(cur_coefs, ds_fold_at_dim, upsampled_coefs);
 //			conv_by_separable_kernels<_Tp>(upsampled_coefs, chosen_filter_at_dim, true, upsampled_coefs);
-			conv_by_separable_kernels_and_us<_Tp>(cur_coefs, chosen_filter_at_dim, ds_fold_at_dim, true, upsampled_coefs);
-			this_level_upsampled_sum += upsampled_coefs;
+			conv_by_separable_kernels_and_us<_Tp>(cur_coefs, chosen_filter_at_dim, ds_fold_at_dim, true, this_level_upsampled_sum);
+//			this_level_upsampled_sum += upsampled_coefs;
 
 		}
 
@@ -1021,8 +1205,8 @@ int reconstruct_in_time_domain(const ML_MD_TD_FSystem<_Tp> &ml_md_fs, const type
 		Mat_<Vec<_Tp, 2> > upsampled_coefs;
 		//			upsample<_Tp>(cur_coefs, ds_fold_at_dim, upsampled_coefs);
 		//			conv_by_separable_kernels<_Tp>(upsampled_coefs, chosen_filter_at_dim, true, upsampled_coefs);
-		conv_by_separable_kernels_and_us<_Tp>(this_level_lowpass_approx, lowpass_filter_at_dim, lowpass_ds_fold_at_dim, is_real, upsampled_coefs);
-		this_level_upsampled_sum += upsampled_coefs;
+		conv_by_separable_kernels_and_us<_Tp>(this_level_lowpass_approx, lowpass_filter_at_dim, lowpass_ds_fold_at_dim, is_real, this_level_upsampled_sum);
+//		this_level_upsampled_sum += upsampled_coefs;
 		}
 
 		upper_lowpass_approx = this_level_upsampled_sum;

@@ -712,8 +712,8 @@ int Unit_Test::conv_and_ds_test(int argc, char **argv)
 //	skerns[3].coefs = td_filter;
 //	skerns[3].anchor = 0;
 
-	clock_t s0, s1;
-	string msg;
+//	clock_t s0, s1;
+//	string msg;
 //	conv_by_separable_kernels<double>(mat1, skerns, true, mat2);
 ////	save_as_media<double>("Test-Data/Barbara512-conv.png", mat1, NULL);
 //	s0 = tic();
@@ -766,8 +766,8 @@ int Unit_Test::conv_and_us_test(int argc, char **argv)
 //	skerns[3].coefs = td_filter;
 //	skerns[3].anchor = 0;
 
-	clock_t s0, s1;
-	string msg;
+//	clock_t s0, s1;
+//	string msg;
 //	conv_by_separable_kernels<double>(mat1, skerns, true, mat2);
 ////	save_as_media<double>("Test-Data/Barbara512-conv.png", mat1, NULL);
 //	s0 = tic();
@@ -844,7 +844,7 @@ int Unit_Test::comp_supp_test(int argc, char **argv)
 {
 	Media_Format mfmt1, mfmt2;
 	Mat_<Vec<double, 2> > mat1, mat2, mat3;
-	load_as_tensor<double>("Test-Data/benchmark/coastguard192.avi", mat1, &mfmt1);
+	load_as_tensor<double>("Test-Data/benchmark/tennis.avi", mat1, &mfmt1);
 
 	Mat_<Vec<double, 2> > w1(2, (int[]){1, 2}, Vec<double, 2>(0,0));
 	Mat_<Vec<double, 2> > w2(2, (int[]){1, 2}, Vec<double, 2>(0,0));
@@ -960,7 +960,7 @@ int Unit_Test::performance_test(int argc, char **argv)
 {
 
 
-	const int M = 10*1024, N = 1024;
+	const int M = 3258, N = 3258;
 	const int step = N*2;
 	double r = sqrt(2);
 	double skerns[2*2] = {1/r,0, 1/r,0};
@@ -1057,12 +1057,12 @@ int Unit_Test::performance_test(int argc, char **argv)
 	fftw_execute(plan);
 	fftw_destroy_plan(plan);
 
-	before = reinterpret_cast<fftw_complex *>(kernels);
-	after = reinterpret_cast<fftw_complex *>(mat3);
-	// Here we can only use 'FFTW_ESTIMATE', because 'FFTW_MEASURE' would touch 'before'.
-	plan = fftw_plan_dft(2, (int[]){M,N}, before, after, FFTW_FORWARD, FFTW_ESTIMATE);
-	fftw_execute(plan);
-	fftw_destroy_plan(plan);
+//	before = reinterpret_cast<fftw_complex *>(kernels);
+//	after = reinterpret_cast<fftw_complex *>(mat3);
+//	// Here we can only use 'FFTW_ESTIMATE', because 'FFTW_MEASURE' would touch 'before'.
+//	plan = fftw_plan_dft(2, (int[]){M,N}, before, after, FFTW_FORWARD, FFTW_ESTIMATE);
+//	fftw_execute(plan);
+//	fftw_destroy_plan(plan);
 
 	for (int i = 0; i < M; ++i)
 	{
@@ -1073,12 +1073,12 @@ int Unit_Test::performance_test(int argc, char **argv)
 		}
 	}
 
-	before = reinterpret_cast<fftw_complex *>(mat3);
-	after = reinterpret_cast<fftw_complex *>(mat3);
-	// Here we can only use 'FFTW_ESTIMATE', because 'FFTW_MEASURE' would touch 'before'.
-	plan = fftw_plan_dft(2, (int[]){M,N}, before, after, FFTW_BACKWARD, FFTW_ESTIMATE);
-	fftw_execute(plan);
-	fftw_destroy_plan(plan);
+//	before = reinterpret_cast<fftw_complex *>(mat3);
+//	after = reinterpret_cast<fftw_complex *>(mat3);
+//	// Here we can only use 'FFTW_ESTIMATE', because 'FFTW_MEASURE' would touch 'before'.
+//	plan = fftw_plan_dft(2, (int[]){M,N}, before, after, FFTW_BACKWARD, FFTW_ESTIMATE);
+//	fftw_execute(plan);
+//	fftw_destroy_plan(plan);
 
 	t1 = tic();
 	msg = show_elapse(t1 - t0);
