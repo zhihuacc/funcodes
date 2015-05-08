@@ -17,8 +17,8 @@ STD_FLAG=-std=c++0x
 endif
 
 ifeq ($(OS),MacOS)
-CC=g++
-LINKER=g++
+CC=clang++
+LINKER=clang++
 STD_FLAG=-std=c++11
 endif
 

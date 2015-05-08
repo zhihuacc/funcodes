@@ -1,0 +1,73 @@
+\documentclass[a4paper,5pt]{article}
+\setlength{\parindent}{2em}
+\setlength{\parskip}{1em}
+\usepackage{listings}
+
+\lstset{
+         basicstyle=\footnotesize\ttfamily, % Standardschrift
+         %numbers=left,               % Ort der Zeilennummern
+         numberstyle=\tiny,          % Stil der Zeilennummern
+         %stepnumber=2,               % Abstand zwischen den Zeilennummern
+         numbersep=5pt,              % Abstand der Nummern zum Text
+         tabsize=2,                  % Groesse von Tabs
+         extendedchars=true,         %
+         breaklines=true,            % Zeilen werden Umgebrochen
+         keywordstyle=\color{red},
+         frame=single,         
+ %        keywordstyle=[1]\textbf,    % Stil der Keywords
+ %        keywordstyle=[2]\textbf,    %
+ %        keywordstyle=[3]\textbf,    %
+ %        keywordstyle=[4]\textbf,   \sqrt{\sqrt{}} %
+         stringstyle=\color{white}\ttfamily, % Farbe der String
+         showspaces=false,           % Leerzeichen anzeigen ?
+         showtabs=false,             % Tabs anzeigen ?
+         xleftmargin=17pt,
+         framexleftmargin=17pt,
+         framexrightmargin=5pt,
+         framexbottommargin=4pt,
+         %backgroundcolor=\color{lightgray},
+         showstringspaces=false      % Leerzeichen in Strings anzeigen ?        
+ }
+\title{Complexity Analysis}
+\author{Xiaosheng Zhuang,    Zhihua CHE}
+\date{}
+\begin{document}
+\maketitle
+
+\tableofcontents
+
+\section{Decomposition}
+
+To decompose a signal, input signal will be first convolved and then downsampled. The convolution is done by iteratively and independently convolving the input signal with a 1-d filter along each dimension from high-order to low-order. For different filters, convolution along high-order dimensions are sort of duplicated. So it is reasonable to reduce the computation by saving the intermediate convolution results along high-order dimensions for later use. Besides, downsampling will discard a significant amount of data from convolved results, so it is natural to only convolve on necessary data points in signal, instead of convolving every data point as usual.
+
+It is assumed that the signal is $d$-dimensional and each dimension is of length $N$. It will be convovled by $n$ 1-d filter for each dimension. The filters are all of length $l$. The downsample step in each dimension is $a$. The below is the cost for convolution along $i$th dimension,
+
+\begin{equation}
+cost_{i} = \frac{lN^{d}}{a^{i+1}} \quad\quad (i=0,\cdots,d-1)
+\end{equation}
+
+The convolution along $i$-th dimension will be done $n^{i+1}$ times. So the total cost is
+
+
+\begin{eqnarray}
+cost_{dec} &=& l\frac{N^{d}}{a}n+l\frac{N^{d}}{a^{2}}n^{2}+\cdots+l\frac{N^{d}}{a^{d}}n^{d}  \\
+&=& lN^{d}\left(\frac{n}{a}+\frac{n^{2}}{a^{2}}+ \cdots+ \frac{n^{d}}{a^{d}} \right)  
+\end{eqnarray}
+
+\section{Reconstruction}
+
+To reconsruct a signal, coefficents will be first upsampled and then convolved. Considering that a upsampled coefficent contains large number of zeros, it can be verified that the convolution of a  upsampled coefficient with a filter is equvalent to convolve original coefficient with multiple downsampled filters and sum results up properly. 
+
+The coefficients are of size $\left(\frac{N}{a}\right)^{d}$. The number of downsampled filters for one coefficient is $a^{d}$. The number of coefficients is $n^{d}$. The below is total cost.
+
+
+\begin{eqnarray}
+cost_{rec} &=& \frac{l}{a}\left(\frac{N}{a}\right)^{d}\left(a+a^{2}+\cdots+a^{d}\right)n^{d}    \\
+&=& lN^{d}\left(\frac{n^{d}}{a}+\frac{n^{d}}{a^{2}}+\cdots+\frac{n^{d}}{a^{d}}\right)
+\end{eqnarray}
+
+
+
+
+
+\end{document}

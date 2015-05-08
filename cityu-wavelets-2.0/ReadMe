@@ -12,11 +12,11 @@
        the headers would be in /usr/local/include
 
 3. Build OpenCV
-   3.1) Enter opencv/
+   3.1) create and enter opencv_build/
    3.2) Run commnds below one by one.
-        opencv$ ./configure
-        opencv$ make
-        opencv$ make install
+        opencv_build$ cmake -D CMAKE_INSTALL_PREFIX=../opencv
+        opencv_build$ make
+        opencv_build$ make install
        
         Note: the third command need ROOT previlege.
 
@@ -25,6 +25,7 @@
 
 4. Build Our Own Package.
    4.1) Enter cityu-wavelets-2.0/
+   4.2) If logining server by ssh, command of 'export LD_LIBRARY_PATH=/path/to/lib/dir' should be executed.
    4.2) Open the txt file of 'MakeFile' and check if the path following '-I' in line of 'CPP_FLAGS' is where the headers above are installed.
         Also, check if the path following '-L' in line of 'LD_FLAGS' is where the libraries above are installed.
         For example, if in Linux, the two lines should look like below,
@@ -36,4 +37,12 @@
         opencv$ make -f MakeFile
 
    4.4) If everything is OK, you will see executable file 'cityu-wavelets-2.0' in current directory.
+
+5. Usage.
+   If compiling is ok, 'cwt2' is generated. It support different subcommands.
+   5.1) denoise
+     This is an example command.
+     $ cwt2 denoise -cfg batch_denoise.txt
+     The option of '-cfg' indicates the configuration file the 'denoise' command requires, in which specifies all necessary parameters for doing denoising.
+     Refer to batch_denoise.txt for details about how to customize the configuration file.
 

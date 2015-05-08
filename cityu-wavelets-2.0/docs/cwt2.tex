@@ -2,6 +2,7 @@
 \setlength{\parindent}{2em}
 \setlength{\parskip}{1em}
 \usepackage{listings}
+
 \lstset{
          basicstyle=\footnotesize\ttfamily, % Standardschrift
          %numbers=left,               % Ort der Zeilennummern
@@ -88,16 +89,18 @@ First, open file \lstinline{Makefile.inc}, and then add \lstinline{OS=Linux} rig
 
 \lstinline{$ export LD_LIBRARY_PATH=/home/youraccount/local/lib:$(LD_LIBRARY_PATH)}
 \item[b)] Enter \lstinline{./TPCTF-2.0}.
-\item[c)] For Linux, issue the command below. \lstinline{LIB_HOME} specifies where the all previous packages are installed.
+\item[c)] For Linux, issue the command below. \lstinline{LIB_HOME} specifies where all the previous packages are installed.
 
 \lstinline{$ make LIB_HOME=/home/youraccount/local}
 
 For MacOS, issue the command below
 
 \lstinline{$ make LIB_HOME=/home/youraccount/local OS=MacOS}
+
+If everything goes OK, \lstinline{bin/tpctf2} and \lstinline{lib/libtpctf.so} should appear in the directory.
 \item[d)] Issue the command below to install the package. \lstinline{DIR} specifies where the package will be installed.
 
-\lstinline{$make install DIR=/home/youraccount/local}
+\lstinline{$ make install DIR=/home/youraccount/local}
 
 \end{enumerate}
 
@@ -110,11 +113,11 @@ The command \lstinline{tpctf2} is always issued in this format
 
 \lstinline{$ tpctf2 [sub_commands] [options or parameters]}
 
-Currently the subcommands of \lstinline{denoise, inpaint, cvtxml and psnr} are supported. Here is an example.
+Currently the subcommands of \lstinline{denoise, inpaint, cvtxml} are supported. Here is an example. First enter into \lstinline{TPCTF-2.0}, check if \lstinline{denoise.txt} exists there and issue the command below
 
-\lstinline{$ tpctf2 denoise -cfg denoise.txt}
+\lstinline{$ bin/tpctf2 denoise -cfg denoise.txt}
 
-\lstinline{denoise} is subcommand, and \lstinline{-cfg denoise.txt} is an option to specify that \lstinline{denoise.txt} is the configuration file for this subcommand.
+\lstinline{denoise} is subcommand, and \lstinline{-cfg denoise.txt} is an option to specify that \lstinline{denoise.txt} is the configuration file for this subcommand. Note that check the files listed in \lstinline{fnames} in \lstinline{denoise.txt} exist there.
 
 \subsection{Denoise}
 This subcommand always requires a configuration file in which all the parameters of controlling the denoising procedure are contained. The option \lstinline{-cfg} specifies the configuration file. This following is an full example config file for \lstinline{denoise}. Lines leading with \lstinline{#} are comments for each parameter.
@@ -164,11 +167,11 @@ doNorm ?= "true";
 thr_method ?= "bishrink";
 \end{lstlisting}
 
-  When issuing this command, the value in the configuration file can be override by option $-set$. The format is \textit{-set parameter\_name  new\_parameter\_value}
+  When issuing this command, the value in the configuration file can be override by option \lstinline{-set}. The format is \lstinline{-set parameter_name  new_parameter_value}
   
-  \$ ./tpctf2 denoise -cfg denoise.txt -set nlevels 2
+  \lstinline{$ bin/tpctf2 denoise -cfg denoise.txt -set nlevels 2 }
   
-  Then the value of $nlevels$ would be 2 instead of 5 as specified in the file.
+  Then the value of \lstinline{nlevels} would be \lstinline{2} instead of \lstinline{5} as specified in the file.
   
 \subsection{Inpaint}
 
@@ -257,11 +260,11 @@ As \lstinline{denoise}, option \lstinline{-set} can  override the value in confi
 
 \subsection{Convert to XML}
 
-\lstinline{cvtxml} can convert files in image, video format into xml format. Issue command like this
+Sometimes platforms users work on don't support image/video encoding/decoding, while every platform supports xml file reading/writing. To avoid the situation where users cannot handle images/videos directly, \lstinline{cvtxml} is offered to allow users to convert images/videos to xml files. Issue command like this
 
-\lstinline{$ ./tpctf2 cvtxml Lena512.png Lena512.xml}
+\lstinline{$ bin/tpctf2 cvtxml Test-Data/Lena512.png Test-Data/Lena512.xml}
 
-The command converts \lstinline{Lena512.png} into \lstinline{Lena512.xml}, keeping the same data.
+The command converts \lstinline{Test-Data/Lena512.png} into \lstinline{Test-Data/Lena512.xml}, keeping the same data.
 
 \section{How to Link this Library}
 We will show how to link user code with this library in Linux. The following is a simple code loading two matrices and compute the psnr between them. The file is \lstinline{psnr.cpp}. We assume familarity with C++ template technique.
@@ -408,7 +411,7 @@ You may note that the parameters in the structure corresponds to those in config
 \end{lstlisting}
   \lstinline{load_as_tensor} loads data in image, video, xml file and returns a Mat object. All other interfaces will take \lstinline{Mat_} as input or output.
   \lstinline{compose_fs_param} create a \lstinline{ML_MD_FS_Param} object by composing and checking various parameters.
-  \lstinline{decompose_by_ml_md_filter_bank} takes \lstinline{noisy_mat} as input data to decompose, \lstinline{fs_param} as parameters to control the decomposition; meanwhile, \lstinline{ filter_system} as output containing 1-d filters used to construct m-D filters, \lstinline{norms_set} containing norms of the m-d filters, \lstinline{coefs_set} containing resulting coeficients. 
+  \lstinline{decompose_by_ml_md_filter_bank} takes \lstinline{noisy_mat} as input data to decompose, \lstinline{fs_param} as parameters to control the decomposition; meanwhile, \lstinline{ filter_system} as output containing 1-d filters used to construct m-D filters, \lstinline{norms_set} containing norms of the m-D filters, \lstinline{coefs_set} containing resulting coeficients. 
 
 
 \subsection{reconstruct\_by\_ml\_md\_filter\_bank}
@@ -441,7 +444,7 @@ This interface does thresholding on coefficients.
 \begin{itemize}
 \item \lstinline{coefs_set} Input coefficients to do thresholding on.
 \item \lstinline{opt} Indicates which method is used to do thresholding, currently support \lstinline{localsoft}, \lstinline{localadapt}, \lstinline{bishrink}.
-\item \lstinline{wwidth} Widow width to do convolution with.
+\item \lstinline{wwidth} Window width to do convolution with.
 \item \lstinline{c} Constant value to control thresholding.
 \item \lstinline{sigma} Estimated noise sigma in original matrix.
 \item \lstinline{thr_set} New coefficients as output.
@@ -509,6 +512,185 @@ The following snipet shows the usage. Note that after doing FFT and IFFT using t
  ...
 
 \end{lstlisting}
+
+\subsection{frequency\_domain\_density}
+
+\lstinline{ template<typename _Tp> int frequency_domain_density(const Mat_<Vec<_Tp, 2> > &mat, double r, const SmartIntArray &bins, Mat_<Vec<_Tp, 2> > &hist) }
+
+This interface calculates energy density under sphere coordinates system.
+
+\begin{itemize}
+\item \lstinline{mat} Input frequency-domain data matrix.
+\item \lstinline{r} Energy which are less than \lstinline{r} far from the center of matrix are not counted, as the most energy are highly close to the center.
+\item \lstinline{bins} Integer array to specify the granularity of the output density function. For example, (int[])\{90,180\} specifies that the output density function is a 90 by 180 matrix.
+\item \lstinline{hist} Output density function.
+\end{itemize}
+
+\begin{lstlisting}
+
+	Media_Format mfmt1, mfmt2;
+	Mat_<Vec<double, 2> > mat1, mat2;
+	load_as_tensor<double>("Test-Data/gflower.avi", mat1, &mfmt1);
+
+	normalized_fft<double>(mat1, mat1);
+	center_shift<double>(mat1, mat1);
+	frequency_domain_density<double>(mat1, 30, SmartIntArray(2, (int[]){90,180}), mat2);
+	
+\end{lstlisting}
+
+The snipet above calculates the density of energy which are 30 units far from the center and the output is 90 by 180 matrix.
+
+\subsection{decompose\_in\_time\_domain/reconstruct\_in\_time\_domain}
+\lstinline{template<typename _Tp> int decompose_in_time_domain(const ML_MD_TD_FSystem<_Tp> &ml_md_fs, const Mat_<Vec<_Tp, 2> > &input, bool is_real, typename ML_MC_TD_Filter_Norms_Set<_Tp>::type &norms_set, typename ML_MC_TD_Coefs_Set<_Tp>::type &coefs_set) }
+
+\noindent
+\lstinline{template <typename _Tp> int reconstruct_in_time_domain(const ML_MD_TD_FSystem<_Tp> &ml_md_fs, const typename ML_MC_TD_Coefs_Set<_Tp>::type &coefs_set, bool is_real, Mat_<Vec<_Tp, 2> > &rec) }
+
+These two interfaces do decomposition and reconstruction in time-domain, using compact-support filters.
+
+\begin{itemize}
+\item \lstinline{ml_md_fs} This structure contains compact-support filter information to do decomposition and reconstuction. Its details will be shown in example code below.
+\item \lstinline{input} Input matrix data to be decomposed.
+\item \lstinline{is_real} Indicate the data and filters are real-valued or not. If they are, a faster approach will be used.
+\item \lstinline{norms_set}
+\item \lstinline{coefs_set} This is the set of output coefficients produced by decomposition procedure, and will be used for reconstruction as input.
+\end{itemize} 
+
+This is the detailed structure of \lstinline{ml_md_fs}. It is an object of type \lstinline{ML_MD_TD_FSystem}, which is defined as below.
+
+\begin{lstlisting}
+template <typename _Tp>
+struct ML_MD_TD_FSystem
+{
+	\\ Indicates how many levels the dec/rec proceduure will be.
+	int nlevels;			
+	\\ Indicate how many dimensions the input matrix data will be.
+	int ndims;          
+	\\ An array of objects of type MD_TD_FSystem, 
+	\\ containing filter information for each level.
+	SmartArray<MD_TD_FSystem<_Tp> > md_fs_at_level;    
+};
+
+template <typename _Tp>
+struct MD_TD_FSystem
+{
+    // An array of objects of type OneD_TD_FSystem, containing filter information for each dimension.
+	SmartArray<OneD_TD_FSystem<_Tp> >	oned_fs_at_dim;
+};
+
+#define HIGHPASS_FILTER ((unsigned int)0)
+#define LOWPASS_FILTER  ((unsigned int)1)
+#define LOWPASS_FILTER2 ((unsigned int)2)
+
+template <typename _Tp>
+struct OneD_TD_FSystem
+{
+	// An array of objects of type OneD_TD_Filter. Each object corresponds to one filter.
+	SmartArray<OneD_TD_Filter<_Tp> >	filters;
+	// An array of integers to specify the downsample step for the corresponding filters above.
+	SmartIntArray	ds_folds;
+	// An array of integers to indicate which type of filter it is. Currently there are three types of filters.
+	// HIGHPASS_FILTER : it is a high-pass filter
+	// LOWPASS_FILTER : it is a low-pass filter
+	// LOWPASS_FILTER2 : it is a low-pass filter that is the merge of ones of type LOWPASS_FILTER.
+	SmartArray<unsigned int> flags;
+};
+
+
+template <typename _Tp>
+struct OneD_TD_Filter
+{
+	// Filter coefficients.
+	Mat_<Vec<_Tp, 2> > 	coefs;
+	// Indicate the filter anchor or origin.
+	int 				anchor;
+
+};
+
+\end{lstlisting}
+
+Here is code snipet to show the usage.
+
+\begin{lstlisting}
+	Media_Format mfmt1, mfmt2;
+	Mat_<Vec<double, 2> > mat1, mat2, mat3;
+	load_as_tensor<double>("Test-Data/tennis.avi", mat1, &mfmt1);
+
+	Mat_<Vec<double, 2> > w1(2, (int[]){1, 2}, Vec<double, 2>(0,0));
+	Mat_<Vec<double, 2> > w2(2, (int[]){1, 2}, Vec<double, 2>(0,0));
+	Mat_<Vec<double, 2> > w3(2, (int[]){1, 2}, Vec<double, 2>(0,0));
+	Mat_<Vec<double, 2> > w4(2, (int[]){1, 2}, Vec<double, 2>(0,0));
+	double r = sqrt(2);
+	// These are haar decomposition filters.
+	w1(0,0)[0] = 1.0 / r;
+	w1(0,1)[0] = 1.0 / r;
+	w2(0,0)[0] = 1.0 / r;
+	w2(0,1)[0] = -1.0 / r;
+
+	// These are haar reconstruction filters. The origin is at the second element.
+	w3(0,0)[0] = 1.0 / r;
+	w3(0,1)[0] = 1.0 / r;
+	w4(0,0)[0] = -1.0 / r;
+	w4(0,1)[0] = 1.0 / r;
+
+
+	int nlevels = 5;
+	int ndims = 3;
+	ML_MD_TD_FSystem<double> ml_md_fs(nlevels,ndims);
+	ML_MD_TD_FSystem<double> ml_md_fs2(nlevels,ndims);
+
+	// Construct ml_md_fs and ml_md_fs2 for dec/rec interfaces respectively.
+	for (int i = 0; i < nlevels; i++)
+	{
+		for (int j = 0; j < ndims; j++)
+		{
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters = SmartArray<OneD_TD_Filter<double> >(3);
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].ds_folds = SmartIntArray(3, 2);
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].flags = SmartArray<unsigned int>(2);
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].flags[0] = LOWPASS_FILTER;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].flags[1] = HIGHPASS_FILTER;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].flags[2] = LOWPASS_FILTER2;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[0].coefs = w1;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[0].anchor = 0;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[1].coefs = w2;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[1].anchor = 0;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[2].coefs = w1;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[2].anchor = 0;
+
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters = SmartArray<OneD_TD_Filter<double> >(3);
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].ds_folds = SmartIntArray(3, 2);
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].flags = SmartArray<unsigned int>(2);
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].flags[0] = LOWPASS_FILTER;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].flags[1] = HIGHPASS_FILTER;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].flags[2] = LOWPASS_FILTER2;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[0].coefs = w3;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[0].anchor = 1;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[1].coefs = w4;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[1].anchor = 1;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[2].coefs = w3;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[2].anchor = 1;
+
+
+		}
+	}
+
+	ML_MC_TD_Coefs_Set<double>::type coefs_set;
+	ML_MC_TD_Filter_Norms_Set<double>::type norms_set;
+
+	decompose_in_time_domain<double>(ml_md_fs, mat1, true, norms_set, coefs_set);
+
+	Mat_<Vec<double, 2> > rec;
+	reconstruct_in_time_domain<double>(ml_md_fs2, coefs_set, true, rec);
+\end{lstlisting}
+
+\begin{thebibliography}{99}
+\bibitem{HZZ2013}
+B. Han, Z. Zhao, and X. Zhuang, Directional tensor product complex tight framelets with low redundancy, arXiv:1412.5267.
+
+\bibitem{SHB2013}
+Y. Shen, B. Han, and E. Braverman, Image inpainting using directinal tensor product complex tight framelets, arXiv:1407.3234.
+
+\end{thebibliography}
 
 
 \end{document}

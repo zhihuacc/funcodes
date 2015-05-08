@@ -731,7 +731,7 @@ int Unit_Test::conv_and_ds_test(int argc, char **argv)
 	save_as_media<double>("Test-Data/output/Barbara512-conv.png", mat2, NULL);
 
 	SmartIntArray ds_steps(2, (int[]){2,2});
-	downsample(mat2, ds_steps, mat3);
+	downsample2(mat2, ds_steps, mat3);
 	save_as_media<double>("Test-Data/output/Barbara512-conv-ds.png", mat3, NULL);
 
 //	ds_steps[0] = 1;
@@ -780,7 +780,7 @@ int Unit_Test::conv_and_us_test(int argc, char **argv)
 	conv_by_separable_kernels_and_us<double>(mat1, skerns, step_size, true, mat2);
 
 	upsample<double>(mat1, step_size, mat3);
-	conv_by_separable_kernels<double>(mat3, skerns, true, mat3);
+	conv_by_separable_kernels2<double>(mat3, skerns, true, mat3);
 //	clock_t s2 = tic();
 //	msg = show_elapse(s2 - s1);
 //	cout << msg << endl;
@@ -929,7 +929,7 @@ int Unit_Test::comp_supp_test(int argc, char **argv)
 
 	string msg;
 	clock_t s0 = tic(), s1;
-	decompose_in_time_domain<double>(ml_md_fs, mat1, true, norms_set, coefs_set);
+	decompose_in_time_domain2<double>(ml_md_fs, mat1, true, norms_set, coefs_set);
 	s1 = tic();
 	msg = show_elapse(s1 - s0);
 	cout << "Dec: " << endl << msg << endl;
@@ -963,7 +963,7 @@ int Unit_Test::performance_test(int argc, char **argv)
 	const int M = 3258, N = 3258;
 	const int step = N*2;
 	double r = sqrt(2);
-	double skerns[2*2] = {1/r,0, 1/r,0};
+	double skerns[8*2] = {1/r,0, 1/r,0,1/r,0,1/r,0,1/r,0, 1/r,0,1/r,0,1/r,0};
 //	double mat[M][N*2], mat2[M][N*2], mat3[M][N*2];
 //	double kernels[M][N*2];
 	double *mat, *mat2, *mat3;
@@ -978,6 +978,10 @@ int Unit_Test::performance_test(int argc, char **argv)
 	kernels[1] = 0;
 	kernels[2] = 1 / r;
 	kernels[3] = 0;
+	kernels[4] = 1 / r;
+	kernels[5] = 0;
+	kernels[6] = 1 / r;
+	kernels[7] = 0;
 
 	for (int i = 0; i < M; ++i)
 	{
@@ -997,7 +1001,7 @@ int Unit_Test::performance_test(int argc, char **argv)
 		{
 
 			double sum = 0.0;
-			for (int k = 0; k < 2; ++k)
+			for (int k = 0; k < 8; ++k)
 			{
 				int good_j = j - k;
 				if (good_j < 0)
@@ -1020,7 +1024,7 @@ int Unit_Test::performance_test(int argc, char **argv)
 		{
 
 			double sum = 0.0;
-			for (int k = 0; k < 2; ++k)
+			for (int k = 0; k < 8; ++k)
 			{
 				int good_i = i - k;
 				if (good_i < 0)
@@ -1064,14 +1068,14 @@ int Unit_Test::performance_test(int argc, char **argv)
 //	fftw_execute(plan);
 //	fftw_destroy_plan(plan);
 
-	for (int i = 0; i < M; ++i)
-	{
-		for (int j = 0; j < N; ++j)
-		{
-			mat3[i*step + j*2] = mat3[i*step + j*2] * kernels[i*step + j*2] - mat3[i*step + j*2+1]*kernels[i*step + j*2+1];
-			mat3[i*step + j*2+1] = mat3[i*step + j*2] * kernels[i*step + j*2+1] + mat3[i*step + j*2+1]*kernels[i*step + j*2];
-		}
-	}
+//	for (int i = 0; i < M; ++i)
+//	{
+//		for (int j = 0; j < N; ++j)
+//		{
+//			mat3[i*step + j*2] = mat3[i*step + j*2] * kernels[i*step + j*2] - mat3[i*step + j*2+1]*kernels[i*step + j*2+1];
+//			mat3[i*step + j*2+1] = mat3[i*step + j*2] * kernels[i*step + j*2+1] + mat3[i*step + j*2+1]*kernels[i*step + j*2];
+//		}
+//	}
 
 //	before = reinterpret_cast<fftw_complex *>(mat3);
 //	after = reinterpret_cast<fftw_complex *>(mat3);

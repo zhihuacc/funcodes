@@ -39,9 +39,9 @@ int main(int argc, char **argv)
 
 //	unit_test.conv_and_us_test(argc, argv);
 
-//	unit_test.comp_supp_test(argc, argv);
+	unit_test.comp_supp_test(argc, argv);
 
-	unit_test.performance_test(argc, argv);
+//	unit_test.performance_test(argc, argv);
 
 //	unit_test.test_any(argc, argv);
 }

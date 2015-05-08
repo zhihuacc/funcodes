@@ -3,18 +3,18 @@
 # $ ./cwt2 denoise -set nlevels 2
 
 # This list indicates input image or video files.
-fnames = ["Test-Data/Lena512.png"];
+fnames = ["Test-Data/benchmark/tennis.avi"];
 
 # Specify the dec/rec levels
 nlevels ?= "5";
 
 # Specify the filter system. Currently support 'CTF3', 'CTF6', 'CTF6D4', 'CTF4'.
-fs ?= "CTF6D4";
+fs ?= "CTF3";
 
 # Specify how many pixels will be expanded by.
 # Note: The program will figure a better number based on this parameter. The better one may be different
 #  from the parameter. Normally (not necessarily) it will be 2^(nlevels + 1)
-ext_size ?= "64";
+ext_size ?= "0";
 
 # Specify how the expanded pixels are interpolated. Currently support 'rep', 'mir1001',
 #  'mir101', 'blk'.
