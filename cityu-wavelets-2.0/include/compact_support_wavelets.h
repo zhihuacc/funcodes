@@ -641,7 +641,8 @@ int conv_and_ds_in_one_direction(const Mat_<Vec<_Tp, 2> > &mat, int dim, const O
 				complex<_Tp> *pdrow = (complex<_Tp> *)(&(output(cur_pos)));
 				int stride = mat.step[dim] / sizeof(complex<_Tp>);
 				int this_dim_end = range[dim];
-				for (int i = 0; i < M; i += ds_step)
+				int i = 0;
+				for (; i < M; i += ds_step)
 				{
 					complex<_Tp> sum = 0;
 					for (int j = 0; j < M; ++j)
@@ -657,7 +658,7 @@ int conv_and_ds_in_one_direction(const Mat_<Vec<_Tp, 2> > &mat, int dim, const O
 
 				}
 				int N0 = N - M;
-				for (int i = M; i < N0; i += ds_step)
+				for (; i < N0; i += ds_step)
 				{
 					complex<_Tp> sum = 0;
 					for (int j = 0; j < M; ++j)
@@ -668,7 +669,7 @@ int conv_and_ds_in_one_direction(const Mat_<Vec<_Tp, 2> > &mat, int dim, const O
 					pdrow[i*stride] = sum;
 
 				}
-				for (int i = N0; i < N; i += ds_step)
+				for (; i < N; i += ds_step)
 				{
 					complex<_Tp> sum = 0;
 					for (int j = 0; j < M; ++j)
@@ -743,7 +744,8 @@ int conv_and_ds_in_one_direction(const Mat_<Vec<_Tp, 2> > &mat, int dim, const O
 				_Tp *pdrow = (_Tp*)(&(output(cur_pos)));
 				int stride = mat.step[dim] / sizeof(_Tp);
 				int this_dim_end = range[dim];
-				for (int i = 0; i < M; i += ds_step)
+				int i = 0;
+				for (; i < M; i += ds_step)
 				{
 					_Tp sum = 0;
 					for (int j = 0; j < M; ++j)
@@ -759,7 +761,7 @@ int conv_and_ds_in_one_direction(const Mat_<Vec<_Tp, 2> > &mat, int dim, const O
 
 				}
 				int N0 = N - M;
-				for (int i = M; i < N0; i += ds_step)
+				for (; i < N0; i += ds_step)
 				{
 					_Tp sum = 0;
 					for (int j = 0; j < M; ++j)
@@ -770,7 +772,7 @@ int conv_and_ds_in_one_direction(const Mat_<Vec<_Tp, 2> > &mat, int dim, const O
 					pdrow[i*stride] = sum;
 
 				}
-				for (int i = N0; i < N; i += ds_step)
+				for (; i < N; i += ds_step)
 				{
 					_Tp sum = 0;
 					for (int j = 0; j < M; ++j)
@@ -1160,8 +1162,8 @@ int downsample2(const Mat_<Vec<_Tp, 2> > &mat, const SmartIntArray &ds_steps, Ma
 			{
 				dst_pos[cur_dim] = cur_pos[cur_dim] / ds_steps[cur_dim];
 			}
-			complex<_Tp> *psrow = (complex<_Tp> *)(&mat(cur_pos));
-			complex<_Tp> *pdrow = (complex<_Tp> *)(&tmp(dst_pos));
+			complex<_Tp> *psrow = (complex<_Tp> *)(&(mat(cur_pos)));
+			complex<_Tp> *pdrow = (complex<_Tp> *)(&(tmp(dst_pos)));
 			int n = decimated_size[ndims - 1];
 			int last_step = ds_steps[ndims - 1];
 			for (int i = 0; i < n; ++i)
@@ -1322,7 +1324,9 @@ int conv_by_separable_kernels_and_ds(const Mat_<Vec<_Tp, 2> > &mat, const SmartA
 					int this_dim_end = range[d];
 					int ds_step_d = ds_step[d];
 
-					for (int i = 0; i < M; i += ds_step_d)
+					// SUM pkern[j]*psrow[n+anchor-j];
+					int i = 0;
+					for (; i < M; i += ds_step_d)
 					{
 						complex<_Tp> sum = 0;
 						for (int j = 0; j < M; ++j)
@@ -1338,7 +1342,7 @@ int conv_by_separable_kernels_and_ds(const Mat_<Vec<_Tp, 2> > &mat, const SmartA
 
 					}
 					int N0 = N - M;
-					for (int i = M; i < N0; i += ds_step_d)
+					for (; i < N0; i += ds_step_d)
 					{
 						complex<_Tp> sum = 0;
 						for (int j = 0; j < M; ++j)
@@ -1349,7 +1353,7 @@ int conv_by_separable_kernels_and_ds(const Mat_<Vec<_Tp, 2> > &mat, const SmartA
 						pdrow[i*stride] = sum;
 
 					}
-					for (int i = N0; i < N; i += ds_step_d)
+					for (; i < N; i += ds_step_d)
 					{
 						complex<_Tp> sum = 0;
 						for (int j = 0; j < M; ++j)
@@ -1443,8 +1447,8 @@ int conv_by_separable_kernels_and_ds(const Mat_<Vec<_Tp, 2> > &mat, const SmartA
 					int stride = src.step[d] / sizeof(_Tp);
 					int this_dim_end = range[d];
 					int ds_step_d = ds_step[d];
-
-					for (int i = 0; i < M; i += ds_step_d)
+					int i = 0;
+					for (; i < M; i += ds_step_d)
 					{
 						_Tp sum = 0;
 						for (int j = 0; j < M; ++j)
@@ -1460,7 +1464,7 @@ int conv_by_separable_kernels_and_ds(const Mat_<Vec<_Tp, 2> > &mat, const SmartA
 
 					}
 					int N0 = N - M;
-					for (int i = M; i < N0; i += ds_step_d)
+					for (; i < N0; i += ds_step_d)
 					{
 						_Tp sum = 0;
 						for (int j = 0; j < M; ++j)
@@ -1471,7 +1475,7 @@ int conv_by_separable_kernels_and_ds(const Mat_<Vec<_Tp, 2> > &mat, const SmartA
 						pdrow[i*stride] = sum;
 
 					}
-					for (int i = N0; i < N; i += ds_step_d)
+					for (; i < N; i += ds_step_d)
 					{
 						_Tp sum = 0;
 						for (int j = 0; j < M; ++j)
@@ -1608,6 +1612,11 @@ int conv_by_separable_kernels_and_us(const Mat_<Vec<_Tp, 2> > &mat, const SmartA
 	return 0;
 }
 
+/*
+ * This procedure upsample one of highpass coefs and convolve it with reconstruction filter.
+ * @Param
+ * mat: one of highpass coefs.
+ */
 template<typename _Tp>
 int conv_by_separable_kernels_and_us2(const Mat_<Vec<_Tp, 2> > &mat, const SmartArray<OneD_TD_Filter<_Tp> > &skerns, const SmartIntArray &us_step, bool is_real, Mat_<Vec<_Tp, 2> > &output)
 {
@@ -1743,7 +1752,7 @@ int conv_by_separable_kernels_and_us2(const Mat_<Vec<_Tp, 2> > &mat, const Smart
 //			cout << "subadd in us: " << endl << show_elapse(t0 - t1) << endl;
 
 			//--
-
+			cur_pos.copy(last_pos);
 			cur_dim = src_dims - 1;
 			src_cur_pos[cur_dim] += src_step[cur_dim];
 		}
@@ -1969,6 +1978,10 @@ int decompose_in_time_domain2(const ML_MD_TD_FSystem<_Tp> &ml_md_fs, const Mat_<
 				conv_and_ds_in_one_direction<_Tp>(last, i, chosen_filter_at_dim[i], ds_fold_at_dim[i], is_real, scanned[i]);
 			}
 
+//			stringstream ss;
+//			ss << "Test-Data/output/coef-unds-" << n << ".png";
+//			save_as_media<double>(ss.str(), scanned[ndims-1], NULL);
+
 			Coefs_Item<_Tp> item;
 			item.is_lowpass = false;
 			downsample2<_Tp>(scanned[ndims - 1], ds_fold_at_dim, item.coefs);
@@ -2114,7 +2127,7 @@ int reconstruct_in_time_domain(const ML_MD_TD_FSystem<_Tp> &ml_md_fs, const type
 			lowpass_ds_fold_at_dim[i] = this_level_md_fs.oned_fs_at_dim[i].ds_folds[index];
 		}
 
-		Mat_<Vec<_Tp, 2> > upsampled_coefs;
+//		Mat_<Vec<_Tp, 2> > upsampled_coefs;
 		//			upsample<_Tp>(cur_coefs, ds_fold_at_dim, upsampled_coefs);
 		//			conv_by_separable_kernels<_Tp>(upsampled_coefs, chosen_filter_at_dim, true, upsampled_coefs);
 		conv_by_separable_kernels_and_us<_Tp>(this_level_lowpass_approx, lowpass_filter_at_dim, lowpass_ds_fold_at_dim, is_real, this_level_upsampled_sum);

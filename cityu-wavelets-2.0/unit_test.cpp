@@ -806,36 +806,17 @@ int Unit_Test::test_any(int argc, char **argv)
 {
 
 
-//	Media_Format mfmt1, mfmt2;
-//	Mat_<Vec<double, 2> > mat1, mat2;
-//	load_as_tensor<double>("Test-Data/Lena512.png", mat1, &mfmt1);
-//
-//	normalized_fft<double>(mat1, mat1);
-//	center_shift<double>(mat1, mat1);
-//	frequency_domain_density<double>(mat1, 25.0, SmartIntArray(1, (int[]){36}), mat2);
-//
-//	print_mat_details_g<double, 2>(mat2, 2, "Test-Data/density.txt");
-
 	Media_Format mfmt1, mfmt2;
 	Mat_<Vec<double, 2> > mat1, mat2;
 	load_as_tensor<double>("Test-Data/Barbara512.png", mat1, &mfmt1);
 
-//	conv_by_separable_kernels_and_ds<double>(mat1, SmartArray<OneD_TD_Filter<double> >(), false, mat1);
+	vector<Mat> channels;
+	split(mat1, channels);
+	double d0,d1;
+	minMaxLoc(channels[0], &d0, &d1, NULL, NULL, noArray());
+	channels[0].convertTo(mat2, channels[0].type(), 255.0/(d1-d0), -255.0*d0/(d1-d0));
+	channels[0] = mat2;
 
-	normalized_fft<double>(mat1, mat1);
-	center_shift<double>(mat1, mat1);
-	save_as_media<double>("Test-Data/Barbara-fft.png", mat1, NULL);
-
-	frequency_domain_density<double>(mat1, 30, SmartIntArray(1, (int[]){90}), mat2);
-
-	print_mat_details_g<double, 2>(mat2, 0, "Test-Data/Barbara-density.txt");
-
-	 double d0, d1;
-	 minMaxLoc(mat2, &d0, &d1);
-	 mat2.convertTo(mat2, -1, 255.0 / (d1 - d0), -255.0 * d0 / (d1 - d0));
-	 mat2 = Scalar(255,0) - mat2;
-
-	save_as_media<double>("Test-Data/Barbara-density.png", mat2, NULL);
 
 	return 0;
 }
@@ -844,48 +825,335 @@ int Unit_Test::comp_supp_test(int argc, char **argv)
 {
 	Media_Format mfmt1, mfmt2;
 	Mat_<Vec<double, 2> > mat1, mat2, mat3;
-	load_as_tensor<double>("Test-Data/benchmark/tennis.avi", mat1, &mfmt1);
+//	load_as_tensor<double>("Test-Data/benchmark/coastguard192.avi", mat1, &mfmt1);
+//	load_as_tensor<double>("Test-Data/Lena512.png", mat1, &mfmt1);
+	mat1 = Mat_<Vec<double,2> >(2, (int[]){512,512}, Vec<double,2>(0,0));
+	mat1(0,0)[0] = 1;
 
-	Mat_<Vec<double, 2> > w1(2, (int[]){1, 2}, Vec<double, 2>(0,0));
-	Mat_<Vec<double, 2> > w2(2, (int[]){1, 2}, Vec<double, 2>(0,0));
-	Mat_<Vec<double, 2> > w3(2, (int[]){1, 2}, Vec<double, 2>(0,0));
-	Mat_<Vec<double, 2> > w4(2, (int[]){1, 2}, Vec<double, 2>(0,0));
-	double r = sqrt(2);
-	w1(0,0)[0] = 1.0 / r;
-	w1(0,1)[0] = 1.0 / r;
-	w2(0,0)[0] = 1.0 / r;
-	w2(0,1)[0] = -1.0 / r;
-
-	w3(0,0)[0] = 1.0 / r;
-	w3(0,1)[0] = 1.0 / r;
-	w4(0,0)[0] = -1.0 / r;
-	w4(0,1)[0] = 1.0 / r;
+//	Mat_<Vec<double, 2> > w1(2, (int[]){1, 2}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w2(2, (int[]){1, 2}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w3(2, (int[]){1, 2}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w4(2, (int[]){1, 2}, Vec<double, 2>(0,0));
+//	double r = sqrt(2);
+//	w1(0,0)[0] = 1.0 / r;
+//	w1(0,1)[0] = 1.0 / r;
+//	w2(0,0)[0] = 1.0 / r;
+//	w2(0,1)[0] = -1.0 / r;
+//
+//	w3(0,0)[0] = 1.0 / r;
+//	w3(0,1)[0] = 1.0 / r;
+//	w4(0,0)[0] = -1.0 / r;
+//	w4(0,1)[0] = 1.0 / r;
 
 //	Mat_<Vec<double, 2> > w1(2, (int[]){1, 4}, Vec<double, 2>(0,0));
 //	Mat_<Vec<double, 2> > w2(2, (int[]){1, 4}, Vec<double, 2>(0,0));
 //	Mat_<Vec<double, 2> > w3(2, (int[]){1, 4}, Vec<double, 2>(0,0));
 //	Mat_<Vec<double, 2> > w4(2, (int[]){1, 4}, Vec<double, 2>(0,0));
-//	w1(0,0)[0] = -0.129409522550921;
-//	w1(0,1)[0] = 0.224143868041857;
-//	w1(0,2)[0] = 0.836516303737469;
-//	w1(0,3)[0] =  0.482962913144690;
-//	w2(0,0)[0] = -0.482962913144690;
-//	w2(0,1)[0] =  0.836516303737469;
-//	w2(0,2)[0] = -0.224143868041857;
-//	w2(0,3)[0] =  -0.129409522550921;
+//	double r = sqrt(2);
+//	w1(0,0)[0] = 0;
+//	w1(0,1)[0] = 0;
+//	w1(0,2)[0] = 1.0 / r;
+//	w1(0,3)[0] = 1.0 / r;
+//	w2(0,0)[0] = 0;
+//	w2(0,1)[0] = 0;
+//	w2(0,2)[0] = 1.0 / r;
+//	w2(0,3)[0] = -1.0 / r;
 //
-//	w3(0,0)[0] = 0.482962913144690;
-//	w3(0,1)[0] = 0.836516303737469;
-//	w3(0,2)[0] =  0.224143868041857;
-//	w3(0,3)[0] =  -0.129409522550921;
-//	w4(0,0)[0] = -0.129409522550921;
-//	w4(0,1)[0] =  -0.224143868041857;
-//	w4(0,2)[0] =  0.836516303737469;
-//	w4(0,3)[0] = -0.482962913144690;
+//	w3(0,0)[0] = 1.0 / r;
+//	w3(0,1)[0] = 1.0 / r;
+//	w3(0,2)[0] = 0;
+//	w3(0,3)[0] = 0;
+//	w4(0,0)[0] = -1.0 / r;
+//	w4(0,1)[0] = 1.0 / r;
+//	w4(0,2)[0] = 0;
+//	w4(0,3)[0] = 0;
+
+//	Mat_<Vec<double, 2> > w1(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w2(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w3(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w4(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w5(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w6(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+//	double r = sqrt(2);
+//	w1(0,0)[0] = -1.0*r/32;
+//	w1(0,1)[0] = 0;
+//	w1(0,2)[0] = 9.0*r/32;
+//	w1(0,3)[0] =  1.0*r/2;
+//	w1(0,4)[0] =  9.0*r/32;
+//	w1(0,5)[0] =  0;
+//	w1(0,6)[0] =  -1.0*r/32;
+//
+//	w2(0,0)[0] = 0.000481444121765792*r;
+//	w2(0,0)[1] = 0.00408524754436534*r;
+//	w2(0,1)[0] =  0;
+//	w2(0,1)[1] = 0;
+//	w2(0,2)[0] =  -0.0341138266191344*r;
+//	w2(0,2)[1] =  -0.0906507125861609*r;
+//	w2(0,3)[0] =  -0.00770310594825219*r;
+//	w2(0,3)[1] =  -0.0653639698657795*r;
+//	w2(0,4)[0] =  0.250830888356791*r;
+//	w2(0,4)[1] =  0.246763392579521*r;
+//	w2(0,5)[0] =  -0.344985817122895*r;
+//	w2(0,5)[1] =  0.0406564468467501*r;
+//	w2(0,6)[0] =  0.135490417211720*r;
+//	w2(0,6)[1] =  -0.135490417211720*r;
+//
+//	w3(0,0)[0] = 0.000481444121765792*r;
+//	w3(0,0)[1] = -0.00408524754436534*r;
+//	w3(0,1)[0] =  0;
+//	w3(0,1)[1] = 0;
+//	w3(0,2)[0] =  -0.0341138266191344*r;
+//	w3(0,2)[1] =  0.0906507125861609*r;
+//	w3(0,3)[0] =  -0.00770310594825219*r;
+//	w3(0,3)[1] =  0.0653639698657795*r;
+//	w3(0,4)[0] =  0.250830888356791*r;
+//	w3(0,4)[1] =  -0.246763392579521*r;
+//	w3(0,5)[0] =  -0.344985817122895*r;
+//	w3(0,5)[1] =  -0.0406564468467501*r;
+//	w3(0,6)[0] =  0.135490417211720*r;
+//	w3(0,6)[1] =  0.135490417211720*r;
+//
+//	w4(0,0)[0] =  -1.0*r/32;
+//	w4(0,1)[0] =  0;
+//	w4(0,2)[0] =  9.0*r/32;
+//	w4(0,3)[0] =  1.0*r/2;
+//	w4(0,4)[0] = 9.0*r/32;
+//	w4(0,5)[0] = 0;
+//	w4(0,6)[0] = -1.0*r/32;
+//
+//	w5(0,6)[0] = 0.000481444121765792*r;
+//	w5(0,6)[1] = -0.00408524754436534*r;
+//	w5(0,5)[0] =  0;
+//	w5(0,5)[1] = 0;
+//	w5(0,4)[0] =  -0.0341138266191344*r;
+//	w5(0,4)[1] =  0.0906507125861609*r;
+//	w5(0,3)[0] =  -0.00770310594825219*r;
+//	w5(0,3)[1] =  0.0653639698657795*r;
+//	w5(0,2)[0] =  0.250830888356791*r;
+//	w5(0,2)[1] =  -0.246763392579521*r;
+//	w5(0,1)[0] =  -0.344985817122895*r;
+//	w5(0,1)[1] =  -0.0406564468467501*r;
+//	w5(0,0)[0] =  0.135490417211720*r;
+//	w5(0,0)[1] =  0.135490417211720*r;
+//
+//	w6(0,6)[0] = 0.000481444121765792*r;
+//	w6(0,6)[1] = 0.00408524754436534*r;
+//	w6(0,5)[0] =  0;
+//	w6(0,5)[1] = 0;
+//	w6(0,4)[0] =  -0.0341138266191344*r;
+//	w6(0,4)[1] =  -0.0906507125861609*r;
+//	w6(0,3)[0] =  -0.00770310594825219*r;
+//	w6(0,3)[1] =  -0.0653639698657795*r;
+//	w6(0,2)[0] =  0.250830888356791*r;
+//	w6(0,2)[1] =  0.246763392579521*r;
+//	w6(0,1)[0] =  -0.344985817122895*r;
+//	w6(0,1)[1] =  0.0406564468467501*r;
+//	w6(0,0)[0] =  0.135490417211720*r;
+//	w6(0,0)[1] =  -0.135490417211720*r;
+
+	//e.g.4 our own
+	Mat_<Vec<double, 2> > w1(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+	Mat_<Vec<double, 2> > w2(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+	Mat_<Vec<double, 2> > w3(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+	Mat_<Vec<double, 2> > w4(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+	Mat_<Vec<double, 2> > w5(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+	Mat_<Vec<double, 2> > w6(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+	double r = sqrt(2);
+	double r0 = r;
+	w1(0,0)[0] = -1.0*r0/32;
+	w1(0,1)[0] = 0;
+	w1(0,2)[0] = 9.0*r0/32;
+	w1(0,3)[0] =  1.0*r0/2;
+	w1(0,4)[0] =  9.0*r0/32;
+	w1(0,5)[0] =  0;
+	w1(0,6)[0] =  -1.0*r0/32;
+
+	w2(0,0)[0] = 0.000481446068533238*r;
+	w2(0,0)[1] = 0.00408525137935823*r;
+	w2(0,1)[0] =  0;
+	w2(0,1)[1] = 0;
+	w2(0,2)[0] =  -0.0341137986494924*r;
+	w2(0,2)[1] =  -0.0906506958667750*r;
+	w2(0,3)[0] =  -0.00770313709653181*r;
+	w2(0,3)[1] =  -0.0653640220664934*r;
+	w2(0,4)[0] =  0.250830901990320*r;
+	w2(0,4)[1] =  0.246763412680872*r;
+	w2(0,5)[0] =  -0.344985874504274*r;
+	w2(0,5)[1] =  0.0406565161074923*r;
+	w2(0,6)[0] =  0.135490462191445*r;
+	w2(0,6)[1] =  -0.135490462191445*r;
+
+	w3(0,0)[0] = 0.000481446068533238*r;
+	w3(0,0)[1] = -0.00408525137935823*r;
+	w3(0,1)[0] =  0;
+	w3(0,1)[1] = -0;
+	w3(0,2)[0] =  -0.0341137986494924*r;
+	w3(0,2)[1] =  0.0906506958667750*r;
+	w3(0,3)[0] =  -0.00770313709653181*r;
+	w3(0,3)[1] =  0.0653640220664934*r;
+	w3(0,4)[0] =  0.250830901990320*r;
+	w3(0,4)[1] =  -0.246763412680872*r;
+	w3(0,5)[0] =  -0.344985874504274*r;
+	w3(0,5)[1] =  -0.0406565161074923*r;
+	w3(0,6)[0] =  0.135490462191445*r;
+	w3(0,6)[1] =  0.135490462191445*r;
+
+	w4(0,6)[0] = -1.0*r0/32;
+	w4(0,5)[0] = 0;
+	w4(0,4)[0] = 9.0*r0/32;
+	w4(0,3)[0] =  1.0*r0/2;
+	w4(0,2)[0] =  9.0*r0/32;
+	w4(0,1)[0] =  0;
+	w4(0,0)[0] =  -1.0*r0/32;
+
+	w5(0,6)[0] = 0.000481446068533238*r;
+	w5(0,6)[1] = -0.00408525137935823*r;
+	w5(0,5)[0] =  0;
+	w5(0,5)[1] = -0;
+	w5(0,4)[0] =  -0.0341137986494924*r;
+	w5(0,4)[1] =  0.0906506958667750*r;
+	w5(0,3)[0] =  -0.00770313709653181*r;
+	w5(0,3)[1] =  0.0653640220664934*r;
+	w5(0,2)[0] =  0.250830901990320*r;
+	w5(0,2)[1] =  -0.246763412680872*r;
+	w5(0,1)[0] =  -0.344985874504274*r;
+	w5(0,1)[1] =  -0.0406565161074923*r;
+	w5(0,0)[0] =  0.135490462191445*r;
+	w5(0,0)[1] =  0.135490462191445*r;
+
+	w6(0,6)[0] = 0.000481446068533238*r;
+	w6(0,6)[1] = 0.00408525137935823*r;
+	w6(0,5)[0] =  0;
+	w6(0,5)[1] = 0;
+	w6(0,4)[0] =  -0.0341137986494924*r;
+	w6(0,4)[1] =  -0.0906506958667750*r;
+	w6(0,3)[0] =  -0.00770313709653181*r;
+	w6(0,3)[1] =  -0.0653640220664934*r;
+	w6(0,2)[0] =  0.250830901990320*r;
+	w6(0,2)[1] =  0.246763412680872*r;
+	w6(0,1)[0] =  -0.344985874504274*r;
+	w6(0,1)[1] =  0.0406565161074923*r;
+	w6(0,0)[0] =  0.135490462191445*r;
+	w6(0,0)[1] =  -0.135490462191445*r;
+
+//	Mat_<Vec<double, 2> > w1(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w2(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w3(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w4(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w5(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w6(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+//	double r=sqrt(2);
+//	w1(0,0)[0] = 0;
+//	w1(0,1)[0] = -3.0*r/64;
+//	w1(0,2)[0] = 5.0*r/64;
+//	w1(0,3)[0] =  15.0*r/32;
+//	w1(0,4)[0] =  15.0*r/32;
+//	w1(0,5)[0] =  5.0*r/64;
+//	w1(0,6)[0] =  -3.0*r/64;
+//
+//	w2(0,0)[0] =  0;
+//	w2(0,0)[1] = 0;
+//	w2(0,1)[0] = -0.00427685553137*r;
+//	w2(0,1)[1] = 0.00414104756179*r;
+//	w2(0,2)[0] =  0.00712809255229*r;
+//	w2(0,2)[1] =  -0.00690174593633*r;
+//	w2(0,3)[0] =  -0.0855371106277*r;
+//	w2(0,3)[1] =  -0.173923997595*r;
+//	w2(0,4)[0] =  0.256611331884*r;
+//	w2(0,4)[1] =  0.179445394344*r;
+//	w2(0,5)[0] =  -0.263739424437*r;
+//	w2(0,5)[1] =  0.169782950034*r;
+//	w2(0,6)[0] =  0.0898139661592*r;
+//	w2(0,6)[1] =  -0.172543648408*r;
+//
+//	w3(0,0)[0] =  0;
+//	w3(0,0)[1] = 0;
+//	w3(0,1)[0] = -0.00427685553137*r;
+//	w3(0,1)[1] = -0.00414104756179*r;
+//	w3(0,2)[0] =  0.00712809255229*r;
+//	w3(0,2)[1] =  0.00690174593633*r;
+//	w3(0,3)[0] =  -0.0855371106277*r;
+//	w3(0,3)[1] =  0.173923997595*r;
+//	w3(0,4)[0] =  0.256611331884*r;
+//	w3(0,4)[1] =  -0.179445394344*r;
+//	w3(0,5)[0] =  -0.263739424437*r;
+//	w3(0,5)[1] =  -0.169782950034*r;
+//	w3(0,6)[0] =  0.0898139661592*r;
+//	w3(0,6)[1] =  0.172543648408*r;
+//
+//	w4(0,6)[0] = 0;
+//	w4(0,5)[0] = -3.0*r/64;
+//	w4(0,4)[0] = 5.0*r/64;
+//	w4(0,3)[0] =  15.0*r/32;
+//	w4(0,2)[0] =  15.0*r/32;
+//	w4(0,1)[0] =  5.0*r/64;
+//	w4(0,0)[0] =  -3.0*r/64;
+//
+//
+//	w5(0,6)[0] =  0;
+//	w5(0,6)[1] = 0;
+//	w5(0,5)[0] = -0.00427685553137*r;
+//	w5(0,5)[1] = -0.00414104756179*r;
+//	w5(0,4)[0] =  0.00712809255229*r;
+//	w5(0,4)[1] =  0.00690174593633*r;
+//	w5(0,3)[0] =  -0.0855371106277*r;
+//	w5(0,3)[1] =  0.173923997595*r;
+//	w5(0,2)[0] =  0.256611331884*r;
+//	w5(0,2)[1] =  -0.179445394344*r;
+//	w5(0,1)[0] =  -0.263739424437*r;
+//	w5(0,1)[1] =  -0.169782950034*r;
+//	w5(0,0)[0] =  0.0898139661592*r;
+//	w5(0,0)[1] =  0.172543648408*r;
+//
+//	w6(0,6)[0] =  0;
+//	w6(0,6)[1] = 0;
+//	w6(0,5)[0] = -0.00427685553137*r;
+//	w6(0,5)[1] = 0.00414104756179*r;
+//	w6(0,4)[0] =  0.00712809255229*r;
+//	w6(0,4)[1] =  -0.00690174593633*r;
+//	w6(0,3)[0] =  -0.0855371106277*r;
+//	w6(0,3)[1] =  -0.173923997595*r;
+//	w6(0,2)[0] =  0.256611331884*r;
+//	w6(0,2)[1] =  0.179445394344*r;
+//	w6(0,1)[0] =  -0.263739424437*r;
+//	w6(0,1)[1] =  0.169782950034*r;
+//	w6(0,0)[0] =  0.0898139661592*r;
+//	w6(0,0)[1] =  -0.172543648408*r;
+
+//	Mat_<Vec<double, 2> > w1(2, (int[]){1, 3}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w2(2, (int[]){1, 3}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w3(2, (int[]){1, 3}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w4(2, (int[]){1, 3}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w5(2, (int[]){1, 3}, Vec<double, 2>(0,0));
+//	Mat_<Vec<double, 2> > w6(2, (int[]){1, 3}, Vec<double, 2>(0,0));
+//	double r = sqrt(2);
+//	w1(0,0)[0] = r/4.0;
+//	w1(0,1)[0] = r/2.0;
+//	w1(0,2)[0] = r/4.0;
+//
+//	w2(0,0)[0] =  -1/2.0;
+//	w2(0,1)[0] = 0;
+//	w2(0,2)[0] = 1/2.0;
+//
+//	w3(0,0)[0] =  -r/4.0;
+//	w3(0,1)[0] = r/2.0;
+//	w3(0,2)[0] = -r/4.0;
+//
+//	w4(0,2)[0] = r/4.0;
+//	w4(0,1)[0] = r/2.0;
+//	w4(0,0)[0] = r/4.0;
+//
+//	w5(0,2)[0] =  -1/2.0;
+//	w5(0,1)[0] = 0;
+//	w5(0,0)[0] = 1/2.0;
+//
+//	w6(0,2)[0] =  -r/4.0;
+//	w6(0,1)[0] = r/2.0;
+//	w6(0,0)[0] = -r/4.0;
 
 
-	int nlevels = 5;
-	int ndims = 3;
+	int nlevels = 1;
+	int ndims = 2;
 	ML_MD_TD_FSystem<double> ml_md_fs(nlevels,ndims);
 	ML_MD_TD_FSystem<double> ml_md_fs2(nlevels,ndims);
 
@@ -893,33 +1161,63 @@ int Unit_Test::comp_supp_test(int argc, char **argv)
 	{
 		for (int j = 0; j < ndims; j++)
 		{
-			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters = SmartArray<OneD_TD_Filter<double> >(3);
-			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].ds_folds = SmartIntArray(3, 2);
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters = SmartArray<OneD_TD_Filter<double> >(4);
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].ds_folds = SmartIntArray(4, 2);
 			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].flags = SmartArray<unsigned int>(2);
 			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].flags[0] = LOWPASS_FILTER;
 			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].flags[1] = HIGHPASS_FILTER;
-			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].flags[2] = LOWPASS_FILTER2;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].flags[2] = HIGHPASS_FILTER;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].flags[3] = LOWPASS_FILTER2;
 			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[0].coefs = w1;
-			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[0].anchor = 0;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[0].anchor = 3;
 			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[1].coefs = w2;
-			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[1].anchor = 0;
-			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[2].coefs = w1;
-			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[2].anchor = 0;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[1].anchor = 3;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[2].coefs = w3;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[2].anchor = 3;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[3].coefs = w1;
+			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[3].anchor = 3;
 
-			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters = SmartArray<OneD_TD_Filter<double> >(3);
-			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].ds_folds = SmartIntArray(3, 2);
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters = SmartArray<OneD_TD_Filter<double> >(4);
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].ds_folds = SmartIntArray(4, 2);
 			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].flags = SmartArray<unsigned int>(2);
 			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].flags[0] = LOWPASS_FILTER;
 			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].flags[1] = HIGHPASS_FILTER;
-			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].flags[2] = LOWPASS_FILTER2;
-			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[0].coefs = w3;
-			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[0].anchor = 1;
-			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[1].coefs = w4;
-			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[1].anchor = 1;
-			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[2].coefs = w3;
-			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[2].anchor = 1;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].flags[2] = HIGHPASS_FILTER;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].flags[3] = LOWPASS_FILTER2;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[0].coefs = w4;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[0].anchor = 3;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[1].coefs = w5;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[1].anchor = 3;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[2].coefs = w6;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[2].anchor = 3;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[3].coefs = w4;
+			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[3].anchor = 3;
 
-
+//			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters = SmartArray<OneD_TD_Filter<double> >(3);
+//			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].ds_folds = SmartIntArray(3, 2);
+//			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].flags = SmartArray<unsigned int>(2);
+//			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].flags[0] = LOWPASS_FILTER;
+//			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].flags[1] = HIGHPASS_FILTER;
+//			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].flags[2] = LOWPASS_FILTER2;
+//			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[0].coefs = w1;
+//			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[0].anchor = 2;
+//			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[1].coefs = w2;
+//			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[1].anchor = 2;
+//			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[2].coefs = w1;
+//			ml_md_fs.md_fs_at_level[i].oned_fs_at_dim[j].filters[2].anchor = 2;
+//
+//			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters = SmartArray<OneD_TD_Filter<double> >(3);
+//			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].ds_folds = SmartIntArray(3, 2);
+//			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].flags = SmartArray<unsigned int>(2);
+//			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].flags[0] = LOWPASS_FILTER;
+//			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].flags[1] = HIGHPASS_FILTER;
+//			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].flags[2] = LOWPASS_FILTER2;
+//			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[0].coefs = w3;
+//			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[0].anchor = 1;
+//			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[1].coefs = w4;
+//			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[1].anchor = 1;
+//			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[2].coefs = w3;
+//			ml_md_fs2.md_fs_at_level[i].oned_fs_at_dim[j].filters[2].anchor = 1;
 		}
 	}
 
@@ -929,22 +1227,41 @@ int Unit_Test::comp_supp_test(int argc, char **argv)
 
 	string msg;
 	clock_t s0 = tic(), s1;
-	decompose_in_time_domain2<double>(ml_md_fs, mat1, true, norms_set, coefs_set);
+	decompose_in_time_domain2<double>(ml_md_fs, mat1, false, norms_set, coefs_set);
 	s1 = tic();
 	msg = show_elapse(s1 - s0);
 	cout << "Dec: " << endl << msg << endl;
-//	for (int i = 0; i < (int)coefs_set.size(); ++i)
-//	{
-//		for (int j = 0; j < (int)coefs_set[i].size(); ++j)
-//		{
-//			stringstream ss;
-//			ss << "Test-Data/output/coef-" << i <<"-" <<j << ".png";
-//			save_as_media<double>(ss.str(), coefs_set[i][j].coefs, NULL);
-//		}
-//	}
+	for (int i = 0; i < (int)coefs_set.size(); ++i)
+	{
+		for (int j = 0; j < (int)coefs_set[i].size(); ++j)
+		{
+			stringstream ss;
+			ss << "Test-Data/output/coef-" << i <<"-" <<j << ".png";
+	//			save_as_media<double>(ss.str(), coefs_set[i][j].coefs, NULL);
+			Mat scaled, mat;
+			Mat_<double> T;
+			double d0 = 0, d1 = 0, d3, d4;
+			pw_l2square_cr<double>(coefs_set[i][j].coefs, T);
+			minMaxLoc(T, &d0, &d1, NULL, NULL);
+			T.convertTo(scaled, CV_8UC1, 255.0 / (d1 - d0), -255.0 * d0/ (d1 - d0));
+            imwrite(ss.str(), scaled);
+//			vector<Mat> channels;
+//			split(coefs_set[i][j].coefs, channels);
+//			minMaxLoc(channels[0], &d0,  &d1, NULL, NULL);
+//			cout << "before: " << d0 << ", " << d1 << endl;
+//			minMaxLoc(channels[1], &d3,  &d4, NULL, NULL);
+//			cout << "before2: " << d3 << ", " << d4 << endl;
+//			channels[0].convertTo(scaled, channels[0].type(), 255.0 / (d1 - d0), -255.0 * d0/ (d1 - d0));
+//			minMaxLoc(scaled, &d0, &d1);
+//			cout << "after: " << d0 << ", " << d1 << endl;
+//			channels[0] = scaled;
+//			merge(channels, mat);
+//			save_as_media<double>(ss.str(),mat, NULL);
+		}
+	}
 
 	Mat_<Vec<double, 2> > rec;
-	reconstruct_in_time_domain<double>(ml_md_fs2, coefs_set, true, rec);
+	reconstruct_in_time_domain<double>(ml_md_fs2, coefs_set, false, rec);
 	s0 = tic();
 	msg = show_elapse(s0 - s1);
 	cout << "Rec: " << endl << msg << endl;
@@ -952,7 +1269,7 @@ int Unit_Test::comp_supp_test(int argc, char **argv)
 	psnr<double>(mat1, rec, score, msr);
 	cout << "PSNR: score: " << score << ", msr: " << msr << endl;
 
-//	save_as_media<double>("Test-Data/output/comp-supp-rec.png", rec, NULL);
+	save_as_media<double>("Test-Data/output/comp-supp-rec.png", rec, NULL);
 	return 0;
 }
 

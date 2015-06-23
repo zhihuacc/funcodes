@@ -353,6 +353,86 @@ int thresholding_denoise(const Mat_<Vec<_Tp, 2> > &noisy_input, const ML_MD_FS_P
 	return 0;
 }
 
+template <typename _Tp>
+int compact_support_thresholding_denoise(const Mat_<Vec<_Tp, 2> > &noisy_input, const ML_MD_FS_Param &fs_param, const Thresholding_Param &thr_param, Mat_<Vec<_Tp, 2> > &output)
+{
+	int ndims = noisy_input.dims;
+	SmartIntArray input_size(ndims, noisy_input.size);
+	SmartIntArray better_ext_border(ndims);
+
+
+	figure_good_mat_size(fs_param, input_size, fs_param.ext_border, better_ext_border);
+
+	cout <<"Actual extension border: " << endl;
+	cout << "  ";
+	for (int i = 0; i < ndims; ++i)
+	{
+		cout << better_ext_border[i] << " ";
+	}
+	cout << endl;
+
+	Mat_<Vec<_Tp, 2> > ext_input, rec;
+	mat_border_extension<_Tp>(noisy_input, better_ext_border, fs_param.ext_method, ext_input);
+
+
+	ML_MD_FSystem<_Tp> 					filter_system;
+	typename ML_MC_Coefs_Set<_Tp>::type 			coefs_set, new_coefs_set;
+	typename ML_MC_Filter_Norms_Set<_Tp>::type 	norms_set;
+
+	clock_t t0 = tic();
+	decompose_by_ml_md_filter_bank2<_Tp>(fs_param, ext_input, filter_system, norms_set, coefs_set);
+	clock_t t1 = tic();
+	string msg = show_elapse(t1 - t0);
+	cout << endl << "Dec Time: " << endl << msg << endl;
+	ext_input.release();
+
+//	cout << "Filter Norms: " << endl;
+//	for (int i = 0; i < (int)norms_set.size(); ++i)
+//	{
+//		for (int j = 0; j < (int)norms_set[i].size(); ++j)
+//		{
+//			cout << norms_set[i][j] << " ";
+//		}
+//		cout << endl;
+//	}
+
+	t0 = tic();
+	if (thr_param.doNormalization)
+	{
+		normalize_coefs<_Tp>(coefs_set, norms_set, true, coefs_set);
+	}
+	thresholding<_Tp>(coefs_set, thr_param.thr_method, thr_param.wwidth, thr_param.c, thr_param.stdev, new_coefs_set);
+	if (thr_param.doNormalization)
+	{
+		normalize_coefs<_Tp>(new_coefs_set, norms_set, false, new_coefs_set);
+	}
+	t1 = tic();
+	msg = show_elapse(t1 - t0);
+//	cout << endl << "Denoising Time: " << endl << msg << endl;
+
+//	for (int i = 0; i < new_coefs_set.size(); ++i)
+//	{
+//		for (int j = 0; j < new_coefs_set[i].size(); ++j)
+//		{
+//			stringstream ss;
+//			ss << "Test-Data/output/coef_" << i << "_" << j << ".txt";
+//			print_mat_details_g<_Tp>(new_coefs_set[i][j], 2, ss.str());
+//		}
+//	}
+
+	t0 = tic();
+	reconstruct_by_ml_md_filter_bank2<_Tp>(fs_param, filter_system, new_coefs_set, rec);
+	t1 = tic();
+	msg = show_elapse(t1 - t0);
+	cout << "Rec Time: " << endl << msg << endl;
+
+	mat_border_extension<_Tp>(rec, better_ext_border, "cut", rec);
+	output = rec;
+//	pw_abs<_Tp>(rec, output);
+
+	return 0;
+}
+
 //int denoise_entry(const Configuration *cfg, const string &noisy_file);
 //int denoising_demo(const string &fn);
 
