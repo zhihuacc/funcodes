@@ -75,7 +75,7 @@ int Unit_Test::decomposition_test(int argc, char **argv)
 //			save_as_media<double>(ss.str(), coefs_set[i][j], &mfmt);
 
 			Mat_<Vec<double, 2> > fd;
-			normalized_fft<double>(coefs_set[i][j], fd);
+			normalized_fft<double>(coefs_set[i][j].coefs, fd);
 			center_shift<double>(fd, fd);
 //			cout << "Coef-" << i << "-" << j << endl;
 			print_mat_details_g<double,2>(fd, 2, ss.str());
@@ -213,7 +213,7 @@ int Unit_Test::reconstruction_test(int argc, char **argv)
 //			Mat_<Vec<double, 2> > fd;
 //			normalized_fft<double>(coefs_set[i][j], fd);
 //			center_shift<double>(fd, fd);
-			print_mat_details_g<double,2>(coefs_set[i][j], 2, ss.str());
+			print_mat_details_g<double,2>(coefs_set[i][j].coefs, 2, ss.str());
 
 		}
 	}
@@ -333,13 +333,13 @@ int Unit_Test::reconstruction_test2(int argc, char **argv)
 
 	cout << "PSNR level 1 lowpass: " << endl;
 	double score1, msr1;
-	psnr<RECONSTRUCT_FLOAT_TYPE>(coefs_set[0][coefs_set[0].size()  -1], coefs_set1[0][coefs_set1[0].size()  -1], score1, msr1);
+	psnr<RECONSTRUCT_FLOAT_TYPE>(coefs_set[0][coefs_set[0].size()  -1].coefs, coefs_set1[0][coefs_set1[0].size()  -1].coefs, score1, msr1);
 	cout <<"   score: " << score1 << ", msr: " << msr1 << endl;
 	cout << "PSNR level 2 lowpass: " << endl;
-	psnr<RECONSTRUCT_FLOAT_TYPE>(coefs_set[1][coefs_set[1].size()  -1], coefs_set1[1][coefs_set1[1].size()  -1], score1, msr1);
+	psnr<RECONSTRUCT_FLOAT_TYPE>(coefs_set[1][coefs_set[1].size()  -1].coefs, coefs_set1[1][coefs_set1[1].size()  -1].coefs, score1, msr1);
 	cout <<"   score: " << score1 << ", msr: " << msr1 << endl;
 
-	psnr<RECONSTRUCT_FLOAT_TYPE>(coefs_set[1][0], coefs_set1[1][coefs_set1[1].size() - 2], score1, msr1);
+	psnr<RECONSTRUCT_FLOAT_TYPE>(coefs_set[1][0].coefs, coefs_set1[1][coefs_set1[1].size() - 2].coefs, score1, msr1);
 	cout <<"   score: " << score1 << ", msr: " << msr1 << endl;
 
 //
@@ -821,6 +821,64 @@ int Unit_Test::test_any(int argc, char **argv)
 	return 0;
 }
 
+int Unit_Test::comp_supp_test2(int argc, char **argv)
+{
+	int nlevels = 1, ndims = 2;
+	Media_Format mfmt1, mfmt2;
+	Mat_<Vec<double, 2> > mat1, mat2, mat3;
+//	load_as_tensor<double>("Test-Data/benchmark/coastguard192.avi", mat1, &mfmt1);
+	load_as_tensor<double>("Test-Data/Lena512.png", mat1, &mfmt1);
+
+	ML_MD_TD_FS_Param fs_param(nlevels, ndims);
+	compose_compact_support_fs_param(nlevels, ndims, "comp-1", 5, "rep",  false, fs_param);
+
+	clock_t t0, t1;
+	string msg;
+	ML_MD_TD_FSystem<double> fs1, fs2;
+
+	construct_ml_md_td_filter_system(fs_param, fs1, fs2);
+	ML_MC_Coefs_Set<double>::type coefs_set;
+	ML_MC_Filter_Norms_Set<double>::type norms_set;
+	t0 = tic();
+	decompose_in_time_domain2(fs_param, fs1, mat1, norms_set, coefs_set);
+	t1 = tic();
+	msg = show_elapse(t1 - t0);
+	cout << "Rec: " << msg << endl;
+	for (int i = 0; i < (int)coefs_set.size(); ++i)
+		{
+			for (int j = 0; j < (int)coefs_set[i].size(); ++j)
+			{
+				stringstream ss;
+				ss << "Test-Data/output/coef-" << i <<"-" <<j << ".png";
+				save_as_media<double>(ss.str(), coefs_set[i][j].coefs, NULL);
+				cout << norms_set[i][j] << " ";
+//				Mat scaled, mat;
+//				Mat_<double> T;
+//				double d0 = 0, d1 = 0, d3, d4;
+//				pw_l2square_cr<double>(coefs_set[i][j].coefs, T);
+//				minMaxLoc(T, &d0, &d1, NULL, NULL);
+//				T.convertTo(scaled, CV_8UC1, 255.0 / (d1 - d0), -255.0 * d0/ (d1 - d0));
+//	            imwrite(ss.str(), scaled);
+
+			}
+			cout << endl;
+		}
+
+	Mat_<Vec<double,2> > rec;
+	reconstruct_in_time_domain(fs_param, fs2, coefs_set, rec);
+	t0 = tic();
+	msg = show_elapse(t0 - t1);
+	cout << "Rec: " << endl << msg << endl;
+	double score, msr;
+	psnr<double>(mat1, rec, score, msr);
+	cout << "PSNR: score: " << score << ", msr: " << msr << endl;
+
+	save_as_media<double>("Test-Data/output/comp-supp-rec.png", rec, NULL);
+	return 0;
+
+
+}
+
 int Unit_Test::comp_supp_test(int argc, char **argv)
 {
 	Media_Format mfmt1, mfmt2;
@@ -1222,12 +1280,13 @@ int Unit_Test::comp_supp_test(int argc, char **argv)
 	}
 
 
-	ML_MC_TD_Coefs_Set<double>::type coefs_set;
-	ML_MC_TD_Filter_Norms_Set<double>::type norms_set;
+	ML_MC_Coefs_Set<double>::type coefs_set;
+	ML_MC_Filter_Norms_Set<double>::type norms_set;
+	ML_MD_TD_FSystem<double> filter_system;
 
 	string msg;
 	clock_t s0 = tic(), s1;
-	decompose_in_time_domain2<double>(ml_md_fs, mat1, false, norms_set, coefs_set);
+//	decompose_in_time_domain2<double>(ml_md_fs, filter_system, mat1, norms_set, coefs_set);
 	s1 = tic();
 	msg = show_elapse(s1 - s0);
 	cout << "Dec: " << endl << msg << endl;
@@ -1261,7 +1320,7 @@ int Unit_Test::comp_supp_test(int argc, char **argv)
 	}
 
 	Mat_<Vec<double, 2> > rec;
-	reconstruct_in_time_domain<double>(ml_md_fs2, coefs_set, false, rec);
+//	reconstruct_in_time_domain<double>(ml_md_fs2, coefs_set, false, rec);
 	s0 = tic();
 	msg = show_elapse(s0 - s1);
 	cout << "Rec: " << endl << msg << endl;

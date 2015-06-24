@@ -3,6 +3,7 @@
 
 #include "math_helpers.h"
 #include "mat_toolbox.h"
+#include "structs.h"
 
 
 template<typename _Tp>
@@ -465,30 +466,30 @@ int construct_1d_filter_system(const Mat_<Vec<_Tp, 2> > &x_pts, const OneD_FS_Pa
 // before all filters are constructed.
 // Need a macro switch between Mat_<Vec<double,2> > and Mat_<Vec<float,2> >.
 
-template<typename _Tp>
-struct ML_MC_Coefs_Set
-{
-public:
-	typedef vector<vector<Mat_<Vec<_Tp, 2> > > > type;
-};
-
-template<typename _Tp>
-struct MC_Coefs_Set
-{
-	typedef vector<Mat_<Vec<_Tp, 2> > > type;
-};
-
-template<typename _Tp>
-struct ML_MC_Filter_Norms_Set
-{
-	typedef vector<vector<_Tp> > type;
-};
-
-template<typename _Tp>
-struct MC_Filter_Norms_Set
-{
-	typedef vector<_Tp> type;
-};
+//template<typename _Tp>
+//struct ML_MC_Coefs_Set
+//{
+//public:
+//	typedef vector<vector<Mat_<Vec<_Tp, 2> > > > type;
+//};
+//
+//template<typename _Tp>
+//struct MC_Coefs_Set
+//{
+//	typedef vector<Mat_<Vec<_Tp, 2> > > type;
+//};
+//
+//template<typename _Tp>
+//struct ML_MC_Filter_Norms_Set
+//{
+//	typedef vector<vector<_Tp> > type;
+//};
+//
+//template<typename _Tp>
+//struct MC_Filter_Norms_Set
+//{
+//	typedef vector<_Tp> type;
+//};
 
 int figure_good_mat_size(const ML_MD_FS_Param &fs_param, const SmartIntArray &mat_size, const SmartIntArray &border, SmartIntArray &better);
 
@@ -560,7 +561,7 @@ int decompose_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const Mat_<V
 		}
 		else
 		{
-			last_approx = coefs_set[cur_lvl - 1][coefs_set[cur_lvl - 1].size() - 1];
+			last_approx = coefs_set[cur_lvl - 1][coefs_set[cur_lvl - 1].size() - 1].coefs;
 			coefs_set[cur_lvl - 1].pop_back();
 		}
 
@@ -685,7 +686,12 @@ int decompose_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const Mat_<V
 
 				icenter_shift<_Tp>(last_approx_subarea, last_approx_subarea);
 				normalized_ifft<_Tp>(last_approx_subarea, last_approx_subarea);
-				coefs_set[cur_lvl].push_back(last_approx_subarea);
+
+//				coefs_set[cur_lvl].push_back(last_approx_subarea);
+				Coefs_Item<_Tp> item;
+				item.is_lowpass = false;
+				item.coefs = last_approx_subarea;
+				coefs_set[cur_lvl].push_back(item);
 				// -- Plan A
 
 				// Compute filters' norms.
@@ -729,11 +735,20 @@ int decompose_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const Mat_<V
 			{
 				icenter_shift<_Tp>(last_approx, last_approx);
 				normalized_ifft<_Tp>(last_approx, last_approx);
-				coefs_set[cur_lvl].push_back(last_approx);
+//				coefs_set[cur_lvl].push_back(last_approx);
+
+				Coefs_Item<_Tp> item;
+				item.is_lowpass = true;
+				item.coefs = last_approx;
+				coefs_set[cur_lvl].push_back(item);
 			}
 			else
 			{
-				coefs_set[cur_lvl].push_back(last_approx);
+//				coefs_set[cur_lvl].push_back(last_approx);
+				Coefs_Item<_Tp> item;
+				item.is_lowpass = true;
+				item.coefs = last_approx;
+				coefs_set[cur_lvl].push_back(item);
 			}
 
 			// Compute filter norms. Here update 'last_lowpass_product'.
@@ -777,7 +792,7 @@ int reconstruct_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const ML_M
 		const MD_FSystem<_Tp> &this_level_fs = filter_system.md_fs_at_level[cur_lvl];
 		if (cur_lvl == nlevels - 1)
 		{
-			this_level_lowpass_approx = this_level_coefs_set[this_level_coefs_set.size() - 1].clone();
+			this_level_lowpass_approx = this_level_coefs_set[this_level_coefs_set.size() - 1].coefs.clone();
 			normalized_fft<_Tp>(this_level_lowpass_approx, this_level_lowpass_approx);
 			center_shift<_Tp>(this_level_lowpass_approx, this_level_lowpass_approx);
 		}
@@ -875,7 +890,7 @@ int reconstruct_by_ml_md_filter_bank2(const ML_MD_FS_Param &fs_param, const ML_M
 			}
 			else
 			{
-				Mat_<Vec<_Tp, 2> > this_channel_coef = this_level_coefs_set[highpass_coef_index].clone();
+				Mat_<Vec<_Tp, 2> > this_channel_coef = this_level_coefs_set[highpass_coef_index].coefs.clone();
 				normalized_fft<_Tp>(this_channel_coef, this_channel_coef);
 				center_shift<_Tp>(this_channel_coef, this_channel_coef);
 

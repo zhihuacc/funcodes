@@ -2,6 +2,7 @@
 #define WAVELETS_DENOISING_H
 
 #include "../include/wavelets_toolbox.h"
+#include "../include/compact_support_wavelets.h"
 #include <config4cpp/Configuration.h>
 #include <opencv2/imgproc/imgproc.hpp>
 
@@ -38,17 +39,17 @@ int normalize_coefs(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, const 
 		{
 			if ((i == levels - 1) && j == (n - 1))
 			{
-				new_coefs_set[i][j] = coefs_set[i][j];
+				new_coefs_set[i][j].coefs = coefs_set[i][j].coefs;
 			}
 			else
 			{
 				if (forward)
 				{
-					new_coefs_set[i][j] = coefs_set[i][j] / this_level_norms_set[j];
+					new_coefs_set[i][j].coefs = coefs_set[i][j].coefs / this_level_norms_set[j];
 				}
 				else
 				{
-					new_coefs_set[i][j] = coefs_set[i][j] * this_level_norms_set[j];
+					new_coefs_set[i][j].coefs = coefs_set[i][j].coefs * this_level_norms_set[j];
 				}
 			}
 		}
@@ -63,7 +64,7 @@ int normalize_coefs(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, const 
 template<typename _Tp>
 int bishrink2(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, double c, double sigma, typename ML_MC_Coefs_Set<_Tp>::type &thr_set)
 {
-	int nd = coefs_set[0][0].dims;
+	int nd = coefs_set[0][0].coefs.dims;
 	int nlevels = static_cast<int>( coefs_set.size() );
 	SmartIntArray winsize(nd, wwidth);
 	Mat_<Vec<_Tp, 2> > avg_window(nd, winsize, Vec<_Tp, 2>(1.0 / pow(wwidth, nd),0));
@@ -83,7 +84,7 @@ int bishrink2(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, 
 		new_coefs_set[cur_lvl].resize(this_level_set.size());
 		for (int idx = 0; idx < (int)this_level_set.size(); ++idx)
 		{
-			const Mat_<Vec<_Tp, 2> > Y = this_level_set[idx];
+			const Mat_<Vec<_Tp, 2> > Y = this_level_set[idx].coefs;
 			Mat_<Vec<_Tp, 2> > Y_par;
 			Mat_<_Tp> Y2, Y_par2, T, R;
 //			_Tp inf = numeric_limits<_Tp>::epsilon();
@@ -98,7 +99,7 @@ int bishrink2(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, 
 			T = (c*sigma*sigma) / T;
 			// T is ready and real matrix
 
-			Y_par = lower_level_set[idx].clone();
+			Y_par = lower_level_set[idx].coefs.clone();
 			SmartIntArray times(Y.dims);
 			for (int i = 0; i < Y.dims; ++i)
 			{
@@ -116,7 +117,7 @@ int bishrink2(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, 
 			max(R - T, 0, R);
 			R /= max(T + R, inf);
 
-			pw_mul_crc<_Tp>(Y, R, new_coefs_set[cur_lvl][idx]);
+			pw_mul_crc<_Tp>(Y, R, new_coefs_set[cur_lvl][idx].coefs);
 		}
 	}
 	new_coefs_set[nlevels - 1] = coefs_set[nlevels - 1];
@@ -131,7 +132,7 @@ template<typename _Tp>
 int local_soft2(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, double c, double sigma, typename ML_MC_Coefs_Set<_Tp>::type &thr_set)
 {
 	int nlevels = static_cast<int>( coefs_set.size() );
-	int nd = coefs_set[0][0].dims;
+	int nd = coefs_set[0][0].coefs.dims;
 	SmartIntArray winsize(nd, wwidth);
 	Mat_<Vec<_Tp, 2> > avg_window(nd, winsize, Vec<_Tp, 2>(1.0 / pow(wwidth, nd),0));
 	SmartIntArray anchor(nd, wwidth / 2);
@@ -155,7 +156,7 @@ int local_soft2(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth
 				new_coefs_set[cur_lvl][idx] = coefs_set[cur_lvl][idx];
 				continue;
 			}
-			const Mat_<Vec<_Tp, 2> > Y = this_level_set[idx];
+			const Mat_<Vec<_Tp, 2> > Y = this_level_set[idx].coefs;
 			Mat_<_Tp> Y_abs, T, T_abs;
 			_Tp inf = 2.220446049250313e-16;
 //			_Tp inf = numeric_limits<_Tp>::epsilon();
@@ -176,7 +177,7 @@ int local_soft2(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth
 //			T = 1.0 - T / Y_abs;
 			// T is ratio and ratio is ready
 
-			pw_mul_crc<_Tp>(Y, T, new_coefs_set[cur_lvl][idx], mask);
+			pw_mul_crc<_Tp>(Y, T, new_coefs_set[cur_lvl][idx].coefs, mask);
 		}
 	}
 
@@ -190,7 +191,7 @@ template<typename _Tp>
 int local_adapt2(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidth, double c, double sigma, typename ML_MC_Coefs_Set<_Tp>::type &thr_set)
 {
 	int nlevels = static_cast<int>( coefs_set.size() );
-	int nd = coefs_set[0][0].dims;
+	int nd = coefs_set[0][0].coefs.dims;
 	SmartIntArray winsize(nd, wwidth);
 	Mat_<Vec<_Tp, 2> > avg_window(nd, winsize, Vec<_Tp, 2>(1.0 / pow(wwidth, nd),0));
 	SmartIntArray anchor(nd, wwidth / 2);
@@ -215,7 +216,7 @@ int local_adapt2(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidt
 				continue;
 			}
 
-			const Mat_<Vec<_Tp, 2> > Y = this_level_set[idx];
+			const Mat_<Vec<_Tp, 2> > Y = this_level_set[idx].coefs;
 			Mat_<_Tp> Y_abs, T, T_abs;
 //			_Tp inf = numeric_limits<_Tp>::epsilon();
 			_Tp inf = 2.220446049250313e-16;
@@ -241,7 +242,7 @@ int local_adapt2(const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, int wwidt
 //			T = 1.0 - T / Y_abs;
 			// T is ratio is ready
 
-			pw_mul_crc<_Tp>(Y, T, new_coefs_set[cur_lvl][idx], mask);
+			pw_mul_crc<_Tp>(Y, T, new_coefs_set[cur_lvl][idx].coefs, mask);
 		}
 	}
 
@@ -354,7 +355,7 @@ int thresholding_denoise(const Mat_<Vec<_Tp, 2> > &noisy_input, const ML_MD_FS_P
 }
 
 template <typename _Tp>
-int compact_support_thresholding_denoise(const Mat_<Vec<_Tp, 2> > &noisy_input, const ML_MD_FS_Param &fs_param, const Thresholding_Param &thr_param, Mat_<Vec<_Tp, 2> > &output)
+int compact_support_thresholding_denoise(const Mat_<Vec<_Tp, 2> > &noisy_input, const ML_MD_TD_FS_Param &fs_param, const Thresholding_Param &thr_param, Mat_<Vec<_Tp, 2> > &output)
 {
 	int ndims = noisy_input.dims;
 	SmartIntArray input_size(ndims, noisy_input.size);
@@ -375,12 +376,14 @@ int compact_support_thresholding_denoise(const Mat_<Vec<_Tp, 2> > &noisy_input, 
 	mat_border_extension<_Tp>(noisy_input, better_ext_border, fs_param.ext_method, ext_input);
 
 
-	ML_MD_FSystem<_Tp> 					filter_system;
-	typename ML_MC_Coefs_Set<_Tp>::type 			coefs_set, new_coefs_set;
+	ML_MD_TD_FSystem<_Tp> 					filter_system1, filter_system2;
+	typename ML_MC_Coefs_Set<_Tp>::type 	coefs_set, new_coefs_set;
 	typename ML_MC_Filter_Norms_Set<_Tp>::type 	norms_set;
 
+	construct_ml_md_td_filter_system(fs_param, filter_system1, filter_system2);
+
 	clock_t t0 = tic();
-	decompose_by_ml_md_filter_bank2<_Tp>(fs_param, ext_input, filter_system, norms_set, coefs_set);
+	decompose_in_time_domain2<_Tp>(fs_param, filter_system1, ext_input, norms_set, coefs_set);
 	clock_t t1 = tic();
 	string msg = show_elapse(t1 - t0);
 	cout << endl << "Dec Time: " << endl << msg << endl;
@@ -421,14 +424,13 @@ int compact_support_thresholding_denoise(const Mat_<Vec<_Tp, 2> > &noisy_input, 
 //	}
 
 	t0 = tic();
-	reconstruct_by_ml_md_filter_bank2<_Tp>(fs_param, filter_system, new_coefs_set, rec);
+	reconstruct_in_time_domain<_Tp>(fs_param, filter_system2, new_coefs_set, rec);
 	t1 = tic();
 	msg = show_elapse(t1 - t0);
 	cout << "Rec Time: " << endl << msg << endl;
 
 	mat_border_extension<_Tp>(rec, better_ext_border, "cut", rec);
 	output = rec;
-//	pw_abs<_Tp>(rec, output);
 
 	return 0;
 }
@@ -444,105 +446,204 @@ int batch_denoise(const Configuration *cfg, const string &top_scope)
 	int fnum;
 	cfg->lookupList(top_scope.c_str(), "fnames", fnames, fnum);
 
-	int nlevels = cfg->lookupInt(top_scope.c_str(), "nlevels");
-	string fs_opt( cfg->lookupString(top_scope.c_str(), "fs") );
-	int ext_size = cfg->lookupInt(top_scope.c_str(), "ext_size");
-	string ext_method( cfg->lookupString(top_scope.c_str(), "ext_method") );
-//	string mat_file ( cfg->lookupString(param_scope.c_str(), "f") );
+	string wav_type(cfg->lookupString(top_scope.c_str(), "wav_type"));
 
-	bool is_sym = cfg->lookupBoolean(top_scope.c_str(), "is_sym");
-//	int ndims = cfg->lookupInt(top_scope.c_str(), "ndims");
-
-	Mat_<Vec<_Tp, 2> > noisy_mat;
-	Media_Format mfmt;
-
-//	ML_MD_FS_Param ml_md_fs_param;
-//	int ret = compose_fs_param(nlevels, ndims, fs_opt, ext_size, ext_method, is_sym, ml_md_fs_param);
-//	if (ret)
-//	{
-//		cout << "Error in FS param. " << endl;
-//		return 0;
-//	}
-
-	cout << "Dec-Rec Paramters: " << endl;
-	cout << "  nlevels: " << nlevels << endl;
-//	cout << "  ndims: " << ndims << endl;
-	cout << "  fs: " << fs_opt << endl;
-	cout << "  ext_size: " << ext_size << endl;
-	cout << "  ext_method: " << ext_method << endl;
-	cout << "  is_sym: " << is_sym << endl;
-
-	double mean = static_cast<double>(cfg->lookupFloat(top_scope.c_str(), "mean"));
-	double stdev = static_cast<double>(cfg->lookupFloat(top_scope.c_str(), "stdev"));
-	double c = static_cast<double>(cfg->lookupFloat(top_scope.c_str(), "c"));
-	int wwidth = cfg->lookupInt(top_scope.c_str(), "wwidth");
-	bool doNorm = cfg->lookupBoolean(top_scope.c_str(), "doNorm");
-	string thr_method( cfg->lookupString(top_scope.c_str(), "thr_method") );
-
-	Thresholding_Param thr_param;
-	ret = compose_thr_param(mean, stdev, c, wwidth, doNorm, thr_method, thr_param);
-	if (ret)
+	if (wav_type == "bandlimited")
 	{
-		cout << "Error in Thr param. " << endl;
-		return 0;
-	}
 
-	cout << endl << "Thresholding Parameters: " << endl;
-	cout << "  mean: " << mean << endl;
-	cout << "  stdev: " << stdev << endl;
-	cout << "  c: " << c << endl;
-	cout << "  wwidth: " << wwidth << endl;
-	cout << "  doNorm: " << doNorm << endl;
-	cout << "  thr_method: " << thr_method << endl;
+		int nlevels = cfg->lookupInt(top_scope.c_str(), "nlevels");
+		string fs_opt( cfg->lookupString(top_scope.c_str(), "fs") );
+		int ext_size = cfg->lookupInt(top_scope.c_str(), "ext_size");
+		string ext_method( cfg->lookupString(top_scope.c_str(), "ext_method") );
+	//	string mat_file ( cfg->lookupString(param_scope.c_str(), "f") );
 
+		bool is_sym = cfg->lookupBoolean(top_scope.c_str(), "is_sym");
+	//	int ndims = cfg->lookupInt(top_scope.c_str(), "ndims");
 
-	for (int f = 0; f < fnum; ++f)
-	{
-		string fname(fnames[f]);
+		Mat_<Vec<_Tp, 2> > noisy_mat;
+		Media_Format mfmt;
 
-		Mat_<Vec<_Tp, 2> > clean_mat, noisy_mat;
-		Mat_<Vec<_Tp, 1> > channels[2];
+	//	ML_MD_FS_Param ml_md_fs_param;
+	//	int ret = compose_fs_param(nlevels, ndims, fs_opt, ext_size, ext_method, is_sym, ml_md_fs_param);
+	//	if (ret)
+	//	{
+	//		cout << "Error in FS param. " << endl;
+	//		return 0;
+	//	}
 
-		load_as_tensor<_Tp>(fname, clean_mat, &mfmt);
-		int ndims = clean_mat.dims;
+		cout << "Dec-Rec Paramters: " << endl;
+		cout << "  nlevels: " << nlevels << endl;
+	//	cout << "  ndims: " << ndims << endl;
+		cout << "  fs: " << fs_opt << endl;
+		cout << "  ext_size: " << ext_size << endl;
+		cout << "  ext_method: " << ext_method << endl;
+		cout << "  is_sym: " << is_sym << endl;
 
-		ML_MD_FS_Param ml_md_fs_param;
-		ret = compose_fs_param(nlevels, ndims, fs_opt, ext_size, ext_method, is_sym, ml_md_fs_param);
+		double mean = static_cast<double>(cfg->lookupFloat(top_scope.c_str(), "mean"));
+		double stdev = static_cast<double>(cfg->lookupFloat(top_scope.c_str(), "stdev"));
+		double c = static_cast<double>(cfg->lookupFloat(top_scope.c_str(), "c"));
+		int wwidth = cfg->lookupInt(top_scope.c_str(), "wwidth");
+		bool doNorm = cfg->lookupBoolean(top_scope.c_str(), "doNorm");
+		string thr_method( cfg->lookupString(top_scope.c_str(), "thr_method") );
+
+		Thresholding_Param thr_param;
+		ret = compose_thr_param(mean, stdev, c, wwidth, doNorm, thr_method, thr_param);
 		if (ret)
 		{
-			cout << "Error in FS param. " << endl;
+			cout << "Error in Thr param. " << endl;
 			return 0;
 		}
 
-			// Fake up noises.
-		channels[0] = Mat_<Vec<_Tp, 1> >(clean_mat.dims, clean_mat.size);
-		channels[1] = Mat_<Vec<_Tp, 1> >(clean_mat.dims, clean_mat.size, Vec<_Tp, 1>((_Tp)0));
-		randn(channels[0], mean, stdev);
-		merge(channels, 2, noisy_mat);
-		channels[0].release();
-		channels[1].release();
-
-//		load_as_tensor<FLOAT_TYPE>("Test-Data/nnoise90-512.png", noisy_mat, &mfmt);
-//		write_mat_dat<FLOAT_TYPE, 2>(noisy_mat, "Test-Data/output/noises90.dat");
-		noisy_mat += clean_mat;
+		cout << endl << "Thresholding Parameters: " << endl;
+		cout << "  mean: " << mean << endl;
+		cout << "  stdev: " << stdev << endl;
+		cout << "  c: " << c << endl;
+		cout << "  wwidth: " << wwidth << endl;
+		cout << "  doNorm: " << doNorm << endl;
+		cout << "  thr_method: " << thr_method << endl;
 
 
-		double score, msr;
-		psnr<_Tp>(noisy_mat, clean_mat, score, msr);
-		cout << "Denosing " << fname << " Start: psnr: " << score << ", msr: " << msr << endl;
-
-		Mat_<Vec<_Tp, 2> > denoised_mat;
-		thresholding_denoise<_Tp>(noisy_mat, ml_md_fs_param, thr_param, denoised_mat);
-
-		bool doSave = cfg->lookupBoolean(top_scope.c_str(), "doSave");
-		if (doSave)
+		for (int f = 0; f < fnum; ++f)
 		{
-			string denoised_file = fname + "_denoised_" + mfmt.suffix;
-			save_as_media<_Tp>(denoised_file, denoised_mat, &mfmt);
+			string fname(fnames[f]);
+
+			Mat_<Vec<_Tp, 2> > clean_mat, noisy_mat;
+			Mat_<Vec<_Tp, 1> > channels[2];
+
+			load_as_tensor<_Tp>(fname, clean_mat, &mfmt);
+			int ndims = clean_mat.dims;
+
+			ML_MD_FS_Param ml_md_fs_param;
+			ret = compose_fs_param(nlevels, ndims, fs_opt, ext_size, ext_method, is_sym, ml_md_fs_param);
+			if (ret)
+			{
+				cout << "Error in FS param. " << endl;
+				return 0;
+			}
+
+				// Fake up noises.
+			channels[0] = Mat_<Vec<_Tp, 1> >(clean_mat.dims, clean_mat.size);
+			channels[1] = Mat_<Vec<_Tp, 1> >(clean_mat.dims, clean_mat.size, Vec<_Tp, 1>((_Tp)0));
+			randn(channels[0], mean, stdev);
+			merge(channels, 2, noisy_mat);
+			channels[0].release();
+			channels[1].release();
+
+	//		load_as_tensor<FLOAT_TYPE>("Test-Data/nnoise90-512.png", noisy_mat, &mfmt);
+	//		write_mat_dat<FLOAT_TYPE, 2>(noisy_mat, "Test-Data/output/noises90.dat");
+			noisy_mat += clean_mat;
+
+
+			double score, msr;
+			psnr<_Tp>(noisy_mat, clean_mat, score, msr);
+			cout << "Denosing " << fname << " Start: psnr: " << score << ", msr: " << msr << endl;
+
+			Mat_<Vec<_Tp, 2> > denoised_mat;
+			thresholding_denoise<_Tp>(noisy_mat, ml_md_fs_param, thr_param, denoised_mat);
+
+			bool doSave = cfg->lookupBoolean(top_scope.c_str(), "doSave");
+			if (doSave)
+			{
+				string denoised_file = fname + "_denoised_" + mfmt.suffix;
+				save_as_media<_Tp>(denoised_file, denoised_mat, &mfmt);
+			}
+
+			psnr<_Tp>(denoised_mat, clean_mat, score, msr);
+			cout << "Denoising " << fname << " Done: psnr: " << score << ", msr: " << msr << endl;
+		}
+	}
+	else if (wav_type == "compact")
+	{
+		int nlevels = cfg->lookupInt(top_scope.c_str(), "nlevels");
+		string fs_opt( cfg->lookupString(top_scope.c_str(), "fs") );
+		int ext_size = cfg->lookupInt(top_scope.c_str(), "ext_size");
+		string ext_method( cfg->lookupString(top_scope.c_str(), "ext_method") );
+
+		bool is_real = cfg->lookupBoolean(top_scope.c_str(), "is_real");
+
+		Mat_<Vec<_Tp, 2> > noisy_mat;
+		Media_Format mfmt;
+
+
+		cout << "Dec-Rec Paramters: " << endl;
+		cout << "  nlevels: " << nlevels << endl;
+		cout << "  fs: " << fs_opt << endl;
+		cout << "  ext_size: " << ext_size << endl;
+		cout << "  ext_method: " << ext_method << endl;
+		cout << "  is_real: " << is_real << endl;
+
+		double mean = static_cast<double>(cfg->lookupFloat(top_scope.c_str(), "mean"));
+		double stdev = static_cast<double>(cfg->lookupFloat(top_scope.c_str(), "stdev"));
+		double c = static_cast<double>(cfg->lookupFloat(top_scope.c_str(), "c"));
+		int wwidth = cfg->lookupInt(top_scope.c_str(), "wwidth");
+		bool doNorm = cfg->lookupBoolean(top_scope.c_str(), "doNorm");
+		string thr_method( cfg->lookupString(top_scope.c_str(), "thr_method") );
+
+		Thresholding_Param thr_param;
+		ret = compose_thr_param(mean, stdev, c, wwidth, doNorm, thr_method, thr_param);
+		if (ret)
+		{
+			cout << "Error in Thr param. " << endl;
+			return 0;
 		}
 
-		psnr<_Tp>(denoised_mat, clean_mat, score, msr);
-		cout << "Denoising " << fname << " Done: psnr: " << score << ", msr: " << msr << endl;
+		cout << endl << "Thresholding Parameters: " << endl;
+		cout << "  mean: " << mean << endl;
+		cout << "  stdev: " << stdev << endl;
+		cout << "  c: " << c << endl;
+		cout << "  wwidth: " << wwidth << endl;
+		cout << "  doNorm: " << doNorm << endl;
+		cout << "  thr_method: " << thr_method << endl;
+
+
+		for (int f = 0; f < fnum; ++f)
+		{
+			string fname(fnames[f]);
+
+			Mat_<Vec<_Tp, 2> > clean_mat, noisy_mat;
+			Mat_<Vec<_Tp, 1> > channels[2];
+
+			load_as_tensor<_Tp>(fname, clean_mat, &mfmt);
+			int ndims = clean_mat.dims;
+
+			ML_MD_TD_FS_Param fs_param;
+			ret = compose_compact_support_fs_param(nlevels, ndims, fs_opt, ext_size, ext_method, is_real, fs_param);
+			if (ret)
+			{
+				cout << "Error in FS param. " << endl;
+				return 0;
+			}
+
+				// Fake up noises.
+			channels[0] = Mat_<Vec<_Tp, 1> >(clean_mat.dims, clean_mat.size);
+			channels[1] = Mat_<Vec<_Tp, 1> >(clean_mat.dims, clean_mat.size, Vec<_Tp, 1>((_Tp)0));
+			randn(channels[0], mean, stdev);
+			merge(channels, 2, noisy_mat);
+			channels[0].release();
+			channels[1].release();
+
+	//		load_as_tensor<FLOAT_TYPE>("Test-Data/nnoise90-512.png", noisy_mat, &mfmt);
+	//		write_mat_dat<FLOAT_TYPE, 2>(noisy_mat, "Test-Data/output/noises90.dat");
+			noisy_mat += clean_mat;
+
+
+			double score, msr;
+			psnr<_Tp>(noisy_mat, clean_mat, score, msr);
+			cout << "Denosing " << fname << " Start: psnr: " << score << ", msr: " << msr << endl;
+
+			Mat_<Vec<_Tp, 2> > denoised_mat;
+			compact_support_thresholding_denoise<_Tp>(noisy_mat, fs_param, thr_param, denoised_mat);
+
+			bool doSave = cfg->lookupBoolean(top_scope.c_str(), "doSave");
+			if (doSave)
+			{
+				string denoised_file = fname + "_denoised_" + mfmt.suffix;
+				save_as_media<_Tp>(denoised_file, denoised_mat, &mfmt);
+			}
+
+			psnr<_Tp>(denoised_mat, clean_mat, score, msr);
+			cout << "Denoising " << fname << " Done: psnr: " << score << ", msr: " << msr << endl;
+		}
 	}
 
 	return 0;

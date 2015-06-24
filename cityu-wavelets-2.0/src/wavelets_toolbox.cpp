@@ -84,6 +84,8 @@ int figure_good_mat_size(const ML_MD_FS_Param &fs_param, const SmartIntArray &ma
 	return 0;
 }
 
+
+
 double sincos_bump(double x, int m)
 {
 	double f;

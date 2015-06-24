@@ -3,6 +3,9 @@
 
 #include "math_helpers.h"
 #include "mat_toolbox.h"
+#include "structs.h"
+#include <string>
+using namespace std;
 
 #define HIGHPASS_FILTER ((unsigned int)0)
 #define LOWPASS_FILTER  ((unsigned int)1)
@@ -59,261 +62,300 @@ struct ML_MD_TD_FSystem
 	}
 };
 
-template <typename _Tp>
-struct Coefs_Item
-{
-	Mat_<Vec<_Tp, 2> > coefs;
-	bool is_lowpass;
-	Coefs_Item():is_lowpass(false) {};
-	Coefs_Item(const Mat_<Vec<_Tp, 2> > &c, bool b):coefs(c), is_lowpass(b) {};
-};
-
-template<typename _Tp>
-struct MC_TD_Coefs_Set
-{
-public:
-	typedef vector<Coefs_Item<_Tp> > type;
-};
-
-template<typename _Tp>
-struct ML_MC_TD_Coefs_Set
-{
-public:
-	typedef vector<vector<Coefs_Item<_Tp> > > type;
-};
-
-//template<typename _Tp>
-//struct MC_Coefs_Set
+//struct OneD_FS_Param
 //{
-//	typedef vector<Mat_<Vec<_Tp, 2> > > type;
+//	Smart64FArray 	ctrl_points;
+//	Smart64FArray	epsilons;
+//	SmartIntArray	highpass_ds_folds;
+//	int				lowpass_ds_fold;
+//	int degree;
+//	string opt;
 //};
 
-template<typename _Tp>
-struct ML_MC_TD_Filter_Norms_Set
+struct OneD_TD_FS_Param
 {
-	typedef vector<vector<_Tp> > type;
+	string fb_name;
+	SmartIntArray	ds_folds;
 };
 
-//template<typename _Tp>
-//int conv_by_separable_kernels(const Mat_<Vec<_Tp, 2> > &mat, const SmartArray<OneD_TD_Filter<_Tp> > &skerns, bool is_real, Mat_<Vec<_Tp, 2> > &output)
-//{
-//	int ndims = mat.dims;
-//	if (ndims != skerns.size())
-//	{
-//		return -1;
-//	}
-//
-//	if (is_real == false)
-//	{
-//
-//		Mat_<Vec<_Tp, 2> > src, dst;
-//
-//		src = mat.clone();
-//		dst = Mat_<Vec<_Tp, 2> >(src.dims, src.size, Vec<_Tp, 2>(0,0));
-//		for (int d = 0; d < ndims; ++d)
-//		{
-//			SmartIntArray start_pos(ndims);
-//			SmartIntArray cur_pos(ndims);
-//			SmartIntArray this_dim_pos(ndims);
-//			SmartIntArray step(ndims, 1);
-//			SmartIntArray range(ndims, mat.size);
-//			step[d] = range[d];
-//			{
-//				int src_dims;
-//				SmartIntArray src_start_pos;
-//				SmartIntArray src_cur_pos;
-//				SmartIntArray src_step;
-//				SmartIntArray src_end_pos;
-//
-//				//User-Defined initialization
-//				src_dims = ndims;
-//				src_start_pos = start_pos;
-//				src_cur_pos = cur_pos;
-//				src_step = step;
-//				src_end_pos = range;
-//				//--
-//
-//				int cur_dim = src_dims - 1;
-//				while(true)
-//				{
-//					while (cur_dim >= 0 && src_cur_pos[cur_dim] >= src_end_pos[cur_dim])
-//					{
-//						src_cur_pos[cur_dim] = src_start_pos[cur_dim];
-//						--cur_dim;
-//						if (cur_dim >= 0)
-//						{
-//							src_cur_pos[cur_dim] += src_step[cur_dim];
-//							continue;
-//						}
-//					}
-//					if (cur_dim < 0)
-//					{
-//						break;
-//					}
-//
-//					//User-Defined actions
-//					int N = src.size[d];
-//					const Mat_<Vec<_Tp, 2> > &kern = skerns[d].coefs;
-//					int M = kern.total();
-////					SmartIntArray this_dim_pos = src_cur_pos.clone();
-//					cur_pos.copy(this_dim_pos);
-//					int anchor = skerns[d].anchor;
-//					for (int i = 0; i < N; ++i)
-//					{
-//						complex<_Tp> sum = 0;
-//						for (int j = 0; j < M; ++j)
-//						{
-//							int idx = i + anchor -j;
-//							complex<_Tp> val = 0.0;
-//							{
-//								if (idx < 0)
-//								{
-//									idx += range[d];
-//								}
-//								else if (idx >= range[d])
-//								{
-//									idx -= range[d];
-//								}
-//								this_dim_pos[d] = idx;
-//								val = src.template at<_Tp>(this_dim_pos);
-//							}
-//							// Zero-padding
-////							{
-////								if (idx < 0 || idx >= range[d])
-////								{
-////									val = 0;
-////								}
-////								else
-////								{
-////									this_dim_pos[d] = idx;
-////									val = src.template at<complex<_Tp> >(this_dim_pos);
-////								}
-////							}
-//							sum += (kern.template at<complex<_Tp> >(j) * val);
-//						}
-//						this_dim_pos[d] = i;
-//						dst.template at<complex<_Tp> >(this_dim_pos) = sum;
-//					}
-//					//--
-//
-//					cur_dim = src_dims - 1;
-//					src_cur_pos[cur_dim] += src_step[cur_dim];
-//				}
-//			}
-//
-//			Mat_<Vec<_Tp, 2> > tmp = src;
-//			src = dst;
-//			dst = tmp;
-//		}
-//		output = src;
-//	}
-//	else if (is_real == true)
-//	{
-//		Mat_<Vec<_Tp, 2> > src, dst;
-//
-//		src = mat.clone();
-//		dst = Mat_<Vec<_Tp, 2> >(src.dims, src.size, Vec<_Tp, 2>(0,0));
-//		for (int d = 0; d < ndims; ++d)
-//		{
-//			SmartIntArray start_pos(ndims);
-//			SmartIntArray cur_pos(ndims);
-//			SmartIntArray this_dim_pos(ndims);
-//			SmartIntArray step(ndims, 1);
-//			SmartIntArray range(ndims, mat.size);
-//			step[d] = range[d];
-//			{
-//				int src_dims;
-//				SmartIntArray src_start_pos;
-//				SmartIntArray src_cur_pos;
-//				SmartIntArray src_step;
-//				SmartIntArray src_end_pos;
-//
-//				//User-Defined initialization
-//				src_dims = ndims;
-//				src_start_pos = start_pos;
-//				src_cur_pos = cur_pos;
-//				src_step = step;
-//				src_end_pos = range;
-//				//--
-//
-//				int cur_dim = src_dims - 1;
-//				while(true)
-//				{
-//					while (cur_dim >= 0 && src_cur_pos[cur_dim] >= src_end_pos[cur_dim])
-//					{
-//						src_cur_pos[cur_dim] = src_start_pos[cur_dim];
-//						--cur_dim;
-//						if (cur_dim >= 0)
-//						{
-//							src_cur_pos[cur_dim] += src_step[cur_dim];
-//							continue;
-//						}
-//					}
-//					if (cur_dim < 0)
-//					{
-//						break;
-//					}
-//
-//					//User-Defined actions
-//					int N = src.size[d];
-//					const Mat_<Vec<_Tp, 2> > &kern = skerns[d].coefs;
-//					int M = kern.total();
-////					SmartIntArray this_dim_pos = src_cur_pos.clone();
-//					cur_pos.copy(this_dim_pos);
-//					int anchor = skerns[d].anchor;
-//					for (int i = 0; i < N; ++i)
-//					{
-//						_Tp sum = 0;
-//						for (int j = 0; j < M; ++j)
-//						{
-//							int idx = i + anchor -j;
-//							_Tp val = 0.0;
-//							{
-//								if (idx < 0)
-//								{
-//									idx += range[d];
-//								}
-//								else if (idx >= range[d])
-//								{
-//									idx -= range[d];
-//								}
-//								this_dim_pos[d] = idx;
-//								val = src.template at<_Tp >(this_dim_pos);
-//							}
-//							// Zero-padding
-////							{
-////								if (idx < 0 || idx >= range[d])
-////								{
-////									val = 0;
-////								}
-////								else
-////								{
-////									this_dim_pos[d] = idx;
-////									val = src.template at<Vec<_Tp, 2> >(this_dim_pos)[0];
-////								}
-////							}
-//							sum += (kern.template at<_Tp >(j << 1) * val);
-//						}
-//						this_dim_pos[d] = i;
-//						dst.template at<Vec<_Tp, 2> >(this_dim_pos) = Vec<_Tp, 2>(sum,0);
-//
-//					}
-//					//--
-//
-//					cur_dim = src_dims - 1;
-//					src_cur_pos[cur_dim] += src_step[cur_dim];
-//				}
-//			}
-//
-//			Mat_<Vec<_Tp, 2> >	tmp = src;
-//			src = dst;
-//			dst = tmp;
-//		}
-//		output = src;
-//	}
-//
-//	return 0;
-//}
+struct MD_TD_FS_Param
+{
+	SmartArray<OneD_TD_FS_Param>	oned_fs_param_at_dim;
+//	SmartArray<string>  oned_fb_name_at_dim;
+};
+
+struct ML_MD_TD_FS_Param
+{
+	SmartArray<MD_TD_FS_Param> md_fs_param_at_level;
+	int 					nlevels;
+	int 					ndims;
+	SmartIntArray			ext_border;
+	string					ext_method;
+	bool 					is_real;
+//	bool 					isSym;
+	ML_MD_TD_FS_Param():nlevels(0), ndims(0), is_real(false){}
+
+	ML_MD_TD_FS_Param(int lvl, int d): nlevels(lvl), ndims(d), ext_border(ndims), is_real(false)
+	{
+		md_fs_param_at_level.reserve(nlevels);
+		for (int i = 0; i < nlevels; ++i)
+		{
+			md_fs_param_at_level[i].oned_fs_param_at_dim.reserve(ndims);
+		}
+	}
+};
+
+
+int figure_good_mat_size(const ML_MD_TD_FS_Param &fs_param, const SmartIntArray &mat_size, const SmartIntArray &border, SmartIntArray &better);
+int compose_compact_support_fs_param(int nlvls, int ndims, const string &fs_type, int ext_size, const string &ext_opt, bool is_real, ML_MD_TD_FS_Param &fs_param);
+
+template<typename _Tp>
+int construct_ml_md_td_filter_system(const ML_MD_TD_FS_Param &fs_param, ML_MD_TD_FSystem<_Tp> &filter_system1, ML_MD_TD_FSystem<_Tp> &filter_system2)
+{
+
+	ML_MD_TD_FSystem<_Tp> fs1(fs_param.nlevels, fs_param.ndims);
+	ML_MD_TD_FSystem<_Tp> fs2(fs_param.nlevels, fs_param.ndims);
+	for (int i = 0; i < fs_param.nlevels; ++i)
+	{
+		for (int j = 0; j < fs_param.ndims; ++j)
+		{
+			const OneD_TD_FS_Param &this_dim_param = fs_param.md_fs_param_at_level[i].oned_fs_param_at_dim[j];
+			string fb_name = this_dim_param.fb_name;
+			OneD_TD_FSystem<_Tp> &oned_fs1 = fs1.md_fs_at_level[i].oned_fs_at_dim[j];
+			OneD_TD_FSystem<_Tp> &oned_fs2 = fs2.md_fs_at_level[i].oned_fs_at_dim[j];
+			if (fb_name == "comp-1")
+			{
+				oned_fs1.ds_folds = this_dim_param.ds_folds.clone();
+				oned_fs2.ds_folds = this_dim_param.ds_folds.clone();
+				Mat_<Vec<double, 2> > w1(2, (int[]){1, 3}, Vec<double, 2>(0,0));
+				Mat_<Vec<double, 2> > w2(2, (int[]){1, 3}, Vec<double, 2>(0,0));
+				Mat_<Vec<double, 2> > w3(2, (int[]){1, 3}, Vec<double, 2>(0,0));
+				Mat_<Vec<double, 2> > w4(2, (int[]){1, 3}, Vec<double, 2>(0,0));
+				Mat_<Vec<double, 2> > w5(2, (int[]){1, 3}, Vec<double, 2>(0,0));
+				Mat_<Vec<double, 2> > w6(2, (int[]){1, 3}, Vec<double, 2>(0,0));
+				double r = sqrt(2);
+				w1(0,0)[0] = r/4.0;
+				w1(0,1)[0] = r/2.0;
+				w1(0,2)[0] = r/4.0;
+
+				w2(0,0)[0] =  -1/2.0;
+				w2(0,1)[0] = 0;
+				w2(0,2)[0] = 1/2.0;
+
+				w3(0,0)[0] =  -r/4.0;
+				w3(0,1)[0] = r/2.0;
+				w3(0,2)[0] = -r/4.0;
+
+				w4(0,2)[0] = r/4.0;
+				w4(0,1)[0] = r/2.0;
+				w4(0,0)[0] = r/4.0;
+
+				w5(0,2)[0] =  -1/2.0;
+				w5(0,1)[0] = 0;
+				w5(0,0)[0] = 1/2.0;
+
+				w6(0,2)[0] =  -r/4.0;
+				w6(0,1)[0] = r/2.0;
+				w6(0,0)[0] = -r/4.0;
+
+				oned_fs1.filters = SmartArray<OneD_TD_Filter<double> >(4);
+				oned_fs1.flags = SmartArray<unsigned int>(4);
+				oned_fs1.flags[0] = LOWPASS_FILTER;
+				oned_fs1.flags[1] = HIGHPASS_FILTER;
+				oned_fs1.flags[2] = HIGHPASS_FILTER;
+				oned_fs1.flags[3] = LOWPASS_FILTER2;
+				oned_fs1.filters[0].coefs = w1;
+				oned_fs1.filters[0].anchor = 1;
+				oned_fs1.filters[1].coefs = w2;
+				oned_fs1.filters[1].anchor = 1;
+				oned_fs1.filters[2].coefs = w3;
+				oned_fs1.filters[2].anchor = 1;
+				oned_fs1.filters[3].coefs = w1;
+				oned_fs1.filters[3].anchor = 1;
+
+				oned_fs2.filters = SmartArray<OneD_TD_Filter<double> >(4);
+				oned_fs2.flags = SmartArray<unsigned int>(4);
+				oned_fs2.flags[0] = LOWPASS_FILTER;
+				oned_fs2.flags[1] = HIGHPASS_FILTER;
+				oned_fs2.flags[2] = HIGHPASS_FILTER;
+				oned_fs2.flags[3] = LOWPASS_FILTER2;
+				oned_fs2.filters[0].coefs = w4;
+				oned_fs2.filters[0].anchor = 1;
+				oned_fs2.filters[1].coefs = w5;
+				oned_fs2.filters[1].anchor = 1;
+				oned_fs2.filters[2].coefs = w6;
+				oned_fs2.filters[2].anchor = 1;
+				oned_fs2.filters[3].coefs = w4;
+				oned_fs2.filters[3].anchor = 1;
+			}
+			else if (fb_name == "comp-eg4")
+			{
+				oned_fs1.ds_folds = this_dim_param.ds_folds.clone();
+				oned_fs2.ds_folds = this_dim_param.ds_folds.clone();
+				Mat_<Vec<double, 2> > w1(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+				Mat_<Vec<double, 2> > w2(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+				Mat_<Vec<double, 2> > w3(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+				Mat_<Vec<double, 2> > w4(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+				Mat_<Vec<double, 2> > w5(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+				Mat_<Vec<double, 2> > w6(2, (int[]){1, 7}, Vec<double, 2>(0,0));
+				double r = sqrt(2);
+				double r0 = r;
+				w1(0,0)[0] = -1.0*r0/32;
+				w1(0,1)[0] = 0;
+				w1(0,2)[0] = 9.0*r0/32;
+				w1(0,3)[0] =  1.0*r0/2;
+				w1(0,4)[0] =  9.0*r0/32;
+				w1(0,5)[0] =  0;
+				w1(0,6)[0] =  -1.0*r0/32;
+
+				w2(0,0)[0] = 0.000481446068533238*r;
+				w2(0,0)[1] = 0.00408525137935823*r;
+				w2(0,1)[0] =  0;
+				w2(0,1)[1] = 0;
+				w2(0,2)[0] =  -0.0341137986494924*r;
+				w2(0,2)[1] =  -0.0906506958667750*r;
+				w2(0,3)[0] =  -0.00770313709653181*r;
+				w2(0,3)[1] =  -0.0653640220664934*r;
+				w2(0,4)[0] =  0.250830901990320*r;
+				w2(0,4)[1] =  0.246763412680872*r;
+				w2(0,5)[0] =  -0.344985874504274*r;
+				w2(0,5)[1] =  0.0406565161074923*r;
+				w2(0,6)[0] =  0.135490462191445*r;
+				w2(0,6)[1] =  -0.135490462191445*r;
+
+				w3(0,0)[0] = 0.000481446068533238*r;
+				w3(0,0)[1] = -0.00408525137935823*r;
+				w3(0,1)[0] =  0;
+				w3(0,1)[1] = -0;
+				w3(0,2)[0] =  -0.0341137986494924*r;
+				w3(0,2)[1] =  0.0906506958667750*r;
+				w3(0,3)[0] =  -0.00770313709653181*r;
+				w3(0,3)[1] =  0.0653640220664934*r;
+				w3(0,4)[0] =  0.250830901990320*r;
+				w3(0,4)[1] =  -0.246763412680872*r;
+				w3(0,5)[0] =  -0.344985874504274*r;
+				w3(0,5)[1] =  -0.0406565161074923*r;
+				w3(0,6)[0] =  0.135490462191445*r;
+				w3(0,6)[1] =  0.135490462191445*r;
+
+				w4(0,6)[0] = -1.0*r0/32;
+				w4(0,5)[0] = 0;
+				w4(0,4)[0] = 9.0*r0/32;
+				w4(0,3)[0] =  1.0*r0/2;
+				w4(0,2)[0] =  9.0*r0/32;
+				w4(0,1)[0] =  0;
+				w4(0,0)[0] =  -1.0*r0/32;
+
+				w5(0,6)[0] = 0.000481446068533238*r;
+				w5(0,6)[1] = -0.00408525137935823*r;
+				w5(0,5)[0] =  0;
+				w5(0,5)[1] = -0;
+				w5(0,4)[0] =  -0.0341137986494924*r;
+				w5(0,4)[1] =  0.0906506958667750*r;
+				w5(0,3)[0] =  -0.00770313709653181*r;
+				w5(0,3)[1] =  0.0653640220664934*r;
+				w5(0,2)[0] =  0.250830901990320*r;
+				w5(0,2)[1] =  -0.246763412680872*r;
+				w5(0,1)[0] =  -0.344985874504274*r;
+				w5(0,1)[1] =  -0.0406565161074923*r;
+				w5(0,0)[0] =  0.135490462191445*r;
+				w5(0,0)[1] =  0.135490462191445*r;
+
+				w6(0,6)[0] = 0.000481446068533238*r;
+				w6(0,6)[1] = 0.00408525137935823*r;
+				w6(0,5)[0] =  0;
+				w6(0,5)[1] = 0;
+				w6(0,4)[0] =  -0.0341137986494924*r;
+				w6(0,4)[1] =  -0.0906506958667750*r;
+				w6(0,3)[0] =  -0.00770313709653181*r;
+				w6(0,3)[1] =  -0.0653640220664934*r;
+				w6(0,2)[0] =  0.250830901990320*r;
+				w6(0,2)[1] =  0.246763412680872*r;
+				w6(0,1)[0] =  -0.344985874504274*r;
+				w6(0,1)[1] =  0.0406565161074923*r;
+				w6(0,0)[0] =  0.135490462191445*r;
+				w6(0,0)[1] =  -0.135490462191445*r;
+
+				oned_fs1.filters = SmartArray<OneD_TD_Filter<double> >(4);
+				oned_fs1.flags = SmartArray<unsigned int>(4);
+				oned_fs1.flags[0] = LOWPASS_FILTER;
+				oned_fs1.flags[1] = HIGHPASS_FILTER;
+				oned_fs1.flags[2] = HIGHPASS_FILTER;
+				oned_fs1.flags[3] = LOWPASS_FILTER2;
+				oned_fs1.filters[0].coefs = w1;
+				oned_fs1.filters[0].anchor = 3;
+				oned_fs1.filters[1].coefs = w2;
+				oned_fs1.filters[1].anchor = 3;
+				oned_fs1.filters[2].coefs = w3;
+				oned_fs1.filters[2].anchor = 3;
+				oned_fs1.filters[3].coefs = w1;
+				oned_fs1.filters[3].anchor = 3;
+
+				oned_fs2.filters = SmartArray<OneD_TD_Filter<double> >(4);
+				oned_fs2.flags = SmartArray<unsigned int>(4);
+				oned_fs2.flags[0] = LOWPASS_FILTER;
+				oned_fs2.flags[1] = HIGHPASS_FILTER;
+				oned_fs2.flags[2] = HIGHPASS_FILTER;
+				oned_fs2.flags[3] = LOWPASS_FILTER2;
+				oned_fs2.filters[0].coefs = w4;
+				oned_fs2.filters[0].anchor = 3;
+				oned_fs2.filters[1].coefs = w5;
+				oned_fs2.filters[1].anchor = 3;
+				oned_fs2.filters[2].coefs = w6;
+				oned_fs2.filters[2].anchor = 3;
+				oned_fs2.filters[3].coefs = w4;
+				oned_fs2.filters[3].anchor = 3;
+			}
+			else if (fb_name == "comp-haar")
+			{
+				oned_fs1.ds_folds = this_dim_param.ds_folds.clone();
+				oned_fs2.ds_folds = this_dim_param.ds_folds.clone();
+				Mat_<Vec<double, 2> > w1(2, (int[]){1, 2}, Vec<double, 2>(0,0));
+				Mat_<Vec<double, 2> > w2(2, (int[]){1, 2}, Vec<double, 2>(0,0));
+				Mat_<Vec<double, 2> > w3(2, (int[]){1, 2}, Vec<double, 2>(0,0));
+				Mat_<Vec<double, 2> > w4(2, (int[]){1, 2}, Vec<double, 2>(0,0));
+				double r = sqrt(2);
+				w1(0,0)[0] = 1.0 / r;
+				w1(0,1)[0] = 1.0 / r;
+				w2(0,0)[0] = 1.0 / r;
+				w2(0,1)[0] = -1.0 / r;
+
+				w3(0,0)[0] = 1.0 / r;
+				w3(0,1)[0] = 1.0 / r;
+				w4(0,0)[0] = -1.0 / r;
+				w4(0,1)[0] = 1.0 / r;
+
+				oned_fs1.filters = SmartArray<OneD_TD_Filter<double> >(3);
+				oned_fs1.flags = SmartArray<unsigned int>(3);
+				oned_fs1.flags[0] = LOWPASS_FILTER;
+				oned_fs1.flags[1] = HIGHPASS_FILTER;
+				oned_fs1.flags[2] = LOWPASS_FILTER2;
+				oned_fs1.filters[0].coefs = w1;
+				oned_fs1.filters[0].anchor = 0;
+				oned_fs1.filters[1].coefs = w2;
+				oned_fs1.filters[1].anchor = 0;
+				oned_fs1.filters[2].coefs = w1;
+				oned_fs1.filters[2].anchor = 0;
+
+				oned_fs2.filters = SmartArray<OneD_TD_Filter<double> >(3);
+				oned_fs2.flags = SmartArray<unsigned int>(3);
+				oned_fs2.flags[0] = LOWPASS_FILTER;
+				oned_fs2.flags[1] = HIGHPASS_FILTER;
+				oned_fs2.flags[2] = LOWPASS_FILTER2;
+				oned_fs2.filters[0].coefs = w3;
+				oned_fs2.filters[0].anchor = 1;
+				oned_fs2.filters[1].coefs = w4;
+				oned_fs2.filters[1].anchor = 1;
+				oned_fs2.filters[2].coefs = w3;
+				oned_fs2.filters[2].anchor = 1;
+			}
+
+		}
+	}
+	filter_system1 = fs1;
+	filter_system2 = fs2;
+	return 0;
+}
 
 template<typename _Tp>
 int mat_subadd_equaspaced(Mat_<Vec<_Tp, 2> > &mat, const SmartIntArray &start, const SmartIntArray &steps, const Mat_<Vec<_Tp, 2> > &submat)
@@ -583,8 +625,9 @@ int mat_subadd_equaspaced(Mat_<Vec<_Tp, 2> > &mat, const SmartIntArray &start, c
 //	return 0;
 //}
 
+// This procedure must be invoked in increasing order of 'dim', i.e, from 0 to ndims-1.
 template<typename _Tp>
-int conv_and_ds_in_one_direction(const Mat_<Vec<_Tp, 2> > &mat, int dim, const OneD_TD_Filter<_Tp> &kern, int ds_step, bool is_real, Mat_<Vec<_Tp, 2> > &output)
+int conv_and_ds_in_one_direction(const Mat_<Vec<_Tp, 2> > &mat, int dim, const OneD_TD_Filter<_Tp> &kern, const SmartIntArray &ds_steps, bool is_real, Mat_<Vec<_Tp, 2> > &output)
 {
 	int ndims = mat.dims;
 
@@ -596,6 +639,10 @@ int conv_and_ds_in_one_direction(const Mat_<Vec<_Tp, 2> > &mat, int dim, const O
 		SmartIntArray this_dim_pos(ndims);
 		SmartIntArray step(ndims, 1);
 		SmartIntArray range(ndims, mat.size);
+		for (int i = 0; i < dim; ++i)
+		{
+			step[i] = ds_steps[i];
+		}
 		step[dim] = range[dim];
 		{
 			int src_dims;
@@ -642,7 +689,8 @@ int conv_and_ds_in_one_direction(const Mat_<Vec<_Tp, 2> > &mat, int dim, const O
 				int stride = mat.step[dim] / sizeof(complex<_Tp>);
 				int this_dim_end = range[dim];
 				int i = 0;
-				for (; i < M; i += ds_step)
+				int this_dim_step = ds_steps[dim];
+				for (; i < M; i += this_dim_step)
 				{
 					complex<_Tp> sum = 0;
 					for (int j = 0; j < M; ++j)
@@ -658,7 +706,7 @@ int conv_and_ds_in_one_direction(const Mat_<Vec<_Tp, 2> > &mat, int dim, const O
 
 				}
 				int N0 = N - M;
-				for (; i < N0; i += ds_step)
+				for (; i < N0; i += this_dim_step)
 				{
 					complex<_Tp> sum = 0;
 					for (int j = 0; j < M; ++j)
@@ -669,7 +717,7 @@ int conv_and_ds_in_one_direction(const Mat_<Vec<_Tp, 2> > &mat, int dim, const O
 					pdrow[i*stride] = sum;
 
 				}
-				for (; i < N; i += ds_step)
+				for (; i < N; i += this_dim_step)
 				{
 					complex<_Tp> sum = 0;
 					for (int j = 0; j < M; ++j)
@@ -699,7 +747,12 @@ int conv_and_ds_in_one_direction(const Mat_<Vec<_Tp, 2> > &mat, int dim, const O
 		SmartIntArray this_dim_pos(ndims);
 		SmartIntArray step(ndims, 1);
 		SmartIntArray range(ndims, mat.size);
+		for (int i = 0; i < dim; ++i)
+		{
+			step[i] = ds_steps[i];
+		}
 		step[dim] = range[dim];
+
 		{
 			int src_dims;
 			SmartIntArray src_start_pos;
@@ -745,7 +798,8 @@ int conv_and_ds_in_one_direction(const Mat_<Vec<_Tp, 2> > &mat, int dim, const O
 				int stride = mat.step[dim] / sizeof(_Tp);
 				int this_dim_end = range[dim];
 				int i = 0;
-				for (; i < M; i += ds_step)
+				int this_dim_step = ds_steps[dim];
+				for (; i < M; i += this_dim_step)
 				{
 					_Tp sum = 0;
 					for (int j = 0; j < M; ++j)
@@ -761,7 +815,7 @@ int conv_and_ds_in_one_direction(const Mat_<Vec<_Tp, 2> > &mat, int dim, const O
 
 				}
 				int N0 = N - M;
-				for (; i < N0; i += ds_step)
+				for (; i < N0; i += this_dim_step)
 				{
 					_Tp sum = 0;
 					for (int j = 0; j < M; ++j)
@@ -772,7 +826,7 @@ int conv_and_ds_in_one_direction(const Mat_<Vec<_Tp, 2> > &mat, int dim, const O
 					pdrow[i*stride] = sum;
 
 				}
-				for (; i < N; i += ds_step)
+				for (; i < N; i += this_dim_step)
 				{
 					_Tp sum = 0;
 					for (int j = 0; j < M; ++j)
@@ -797,6 +851,8 @@ int conv_and_ds_in_one_direction(const Mat_<Vec<_Tp, 2> > &mat, int dim, const O
 
 	return 0;
 }
+
+
 
 template<typename _Tp>
 int conv_by_separable_kernels2(const Mat_<Vec<_Tp, 2> > &mat, const SmartArray<OneD_TD_Filter<_Tp> > &skerns, bool is_real, Mat_<Vec<_Tp, 2> > &output)
@@ -1659,6 +1715,7 @@ int conv_by_separable_kernels_and_us2(const Mat_<Vec<_Tp, 2> > &mat, const Smart
 		}
 	}
 
+	SmartIntArray dummy_steps(ndims, 1);
 	SmartArray<Mat_<Vec<_Tp, 2> > > scanned(ndims);
 	SmartIntArray last_pos(ndims);
 	last_pos[0] = -1;
@@ -1734,7 +1791,7 @@ int conv_by_separable_kernels_and_us2(const Mat_<Vec<_Tp, 2> > &mat, const Smart
 				{
 					last = scanned[i - 1];
 				}
-				conv_and_ds_in_one_direction<_Tp>(last, i, chosen_filter_at_dim[i], 1, is_real, scanned[i]);
+				conv_and_ds_in_one_direction<_Tp>(last, i, chosen_filter_at_dim[i], dummy_steps, is_real, scanned[i]);
 			}
 
 			Mat_<Vec<_Tp, 2> >	conv;
@@ -1763,10 +1820,124 @@ int conv_by_separable_kernels_and_us2(const Mat_<Vec<_Tp, 2> > &mat, const Smart
 	return 0;
 }
 
+//template<typename _Tp>
+//int decompose_in_time_domain(const ML_MD_TD_FSystem<_Tp> &ml_md_fs, const Mat_<Vec<_Tp, 2> > &input, bool is_real, typename ML_MC_TD_Filter_Norms_Set<_Tp>::type &norms_set, typename ML_MC_TD_Coefs_Set<_Tp>::type &coefs_set)
+//{
+//
+//	if (ml_md_fs.nlevels < 1
+//		|| input.dims != ml_md_fs.ndims)
+//	{
+//		return -1;
+//	}
+//
+//	int nlevels = ml_md_fs.nlevels;
+//	int ndims = ml_md_fs.ndims;
+//
+//	coefs_set.reserve(nlevels);
+//	coefs_set.resize(nlevels);
+//	norms_set.reserve(nlevels);
+//	norms_set.resize(nlevels);
+//
+//
+//	for (int cur_lvl = 0; cur_lvl < nlevels; cur_lvl++)
+//	{
+//		// This mat is referred to as low-pass channel output last level.
+//		Mat_<Vec<_Tp, 2> > last_approx;
+//		if (cur_lvl == 0)
+//		{
+//			last_approx = input;
+//		}
+//		else
+//		{
+//			last_approx = coefs_set[cur_lvl - 1][coefs_set[cur_lvl - 1].size() - 1].coefs;
+//		}
+//
+//		// This is the number of filters at each dim at this level.
+//		SmartIntArray filter_numbers_at_dim(ndims);
+//
+//		const MD_TD_FSystem<_Tp> &this_level_md_fs = ml_md_fs.md_fs_at_level[cur_lvl];
+////			double lowpass_ds_prod = 1.0;
+//		for (int cur_dim = 0; cur_dim < ndims; ++cur_dim)		// Every dim in this level
+//		{
+//			// The last filter is not counted.
+//			filter_numbers_at_dim[cur_dim] = this_level_md_fs.oned_fs_at_dim[cur_dim].filters.size() - 1;
+//		}
+//
+//
+//		int N = filter_numbers_at_dim[ndims - 1];
+//		SmartIntArray steps(ndims, 1);
+//		steps[ndims - 1] = 1;
+//		for (int i = ndims - 2; i >= 0; --i)
+//		{
+//			steps[i] = filter_numbers_at_dim[i + 1] * steps[i + 1];
+//			N *= filter_numbers_at_dim[i];
+//		}
+//
+//		for (int n = 0; n < N; ++n)
+//		{
+//			// This method is stupid, but clear.
+//			// Because N would not be too large, typically hundreds, this method would not cost much.
+//			SmartIntArray cur_pos(ndims);
+//			for (int i = 0, rem = n; i < ndims; ++i)
+//			{
+//				cur_pos[i] = rem / steps[i];
+//				rem -= (cur_pos[i] * steps[i]);
+//			}
+//
+//			//User-Defined actions
+//			SmartArray<OneD_TD_Filter<_Tp> > chosen_filter_at_dim(ndims);
+//			SmartIntArray ds_fold_at_dim(ndims);
+//			bool is_lowpass = true;
+//			//Should start at 0, since we need to check lowpass for ALL filters
+//			for (int i = 0; i < ndims; ++i)
+//			{
+//				const OneD_TD_Filter<_Tp> &this_filter = this_level_md_fs.oned_fs_at_dim[i].filters[cur_pos[i]];
+//				chosen_filter_at_dim[i] = this_filter;
+//
+//				ds_fold_at_dim[i] = this_level_md_fs.oned_fs_at_dim[i].ds_folds[cur_pos[i]];
+//				is_lowpass = is_lowpass && (this_level_md_fs.oned_fs_at_dim[i].flags[cur_pos[i]] == LOWPASS_FILTER);
+//			}
+//
+//			if (is_lowpass)
+//			{
+//				continue;
+//			}
+//
+//			Coefs_Item<_Tp> item;
+//			item.is_lowpass = false;
+//			conv_by_separable_kernels_and_ds<_Tp>(last_approx, chosen_filter_at_dim, ds_fold_at_dim, is_real, item.coefs);
+//			coefs_set[cur_lvl].push_back(item);
+//
+//			//-- User Action
+//		}
+//
+//		{   // lowpass-channel
+//		SmartArray<OneD_TD_Filter<_Tp> > lowpass_filter_at_dim(ndims);
+//		SmartIntArray lowpass_ds_fold_at_dim(ndims);
+//		for (int i = 0; i < ndims; ++i)
+//		{
+//			int index = this_level_md_fs.oned_fs_at_dim[i].filters.size() - 1;
+//			lowpass_filter_at_dim[i] = this_level_md_fs.oned_fs_at_dim[i].filters[index];
+//			lowpass_ds_fold_at_dim[i] = this_level_md_fs.oned_fs_at_dim[i].ds_folds[index];
+//		}
+//
+//		Coefs_Item<_Tp> item;
+//		item.is_lowpass = true;
+////				conv_by_separable_kernels<_Tp>(last_approx, chosen_filter_at_dim, true, item.coefs);
+////				downsample<_Tp>(item.coefs, ds_fold_at_dim, item.coefs);
+//		conv_by_separable_kernels_and_ds<_Tp>(last_approx, lowpass_filter_at_dim, lowpass_ds_fold_at_dim, is_real, item.coefs);
+//		coefs_set[cur_lvl].push_back(item);
+//		}
+//	}
+//
+//	return 0;
+//}
+
 template<typename _Tp>
-int decompose_in_time_domain(const ML_MD_TD_FSystem<_Tp> &ml_md_fs, const Mat_<Vec<_Tp, 2> > &input, bool is_real, typename ML_MC_TD_Filter_Norms_Set<_Tp>::type &norms_set, typename ML_MC_TD_Coefs_Set<_Tp>::type &coefs_set)
+int decompose_in_time_domain2(const ML_MD_TD_FS_Param &fs_param, ML_MD_TD_FSystem<_Tp> &ml_md_fs, const Mat_<Vec<_Tp, 2> > &input, typename ML_MC_Filter_Norms_Set<_Tp>::type &norms_set, typename ML_MC_Coefs_Set<_Tp>::type &coefs_set)
 {
 
+	bool is_real = fs_param.is_real;
 	if (ml_md_fs.nlevels < 1
 		|| input.dims != ml_md_fs.ndims)
 	{
@@ -1781,120 +1952,8 @@ int decompose_in_time_domain(const ML_MD_TD_FSystem<_Tp> &ml_md_fs, const Mat_<V
 	norms_set.reserve(nlevels);
 	norms_set.resize(nlevels);
 
-
-	for (int cur_lvl = 0; cur_lvl < nlevels; cur_lvl++)
-	{
-		// This mat is referred to as low-pass channel output last level.
-		Mat_<Vec<_Tp, 2> > last_approx;
-		if (cur_lvl == 0)
-		{
-			last_approx = input;
-		}
-		else
-		{
-			last_approx = coefs_set[cur_lvl - 1][coefs_set[cur_lvl - 1].size() - 1].coefs;
-		}
-
-		// This is the number of filters at each dim at this level.
-		SmartIntArray filter_numbers_at_dim(ndims);
-
-		const MD_TD_FSystem<_Tp> &this_level_md_fs = ml_md_fs.md_fs_at_level[cur_lvl];
-//			double lowpass_ds_prod = 1.0;
-		for (int cur_dim = 0; cur_dim < ndims; ++cur_dim)		// Every dim in this level
-		{
-			// The last filter is not counted.
-			filter_numbers_at_dim[cur_dim] = this_level_md_fs.oned_fs_at_dim[cur_dim].filters.size() - 1;
-		}
-
-
-		int N = filter_numbers_at_dim[ndims - 1];
-		SmartIntArray steps(ndims, 1);
-		steps[ndims - 1] = 1;
-		for (int i = ndims - 2; i >= 0; --i)
-		{
-			steps[i] = filter_numbers_at_dim[i + 1] * steps[i + 1];
-			N *= filter_numbers_at_dim[i];
-		}
-
-		for (int n = 0; n < N; ++n)
-		{
-			// This method is stupid, but clear.
-			// Because N would not be too large, typically hundreds, this method would not cost much.
-			SmartIntArray cur_pos(ndims);
-			for (int i = 0, rem = n; i < ndims; ++i)
-			{
-				cur_pos[i] = rem / steps[i];
-				rem -= (cur_pos[i] * steps[i]);
-			}
-
-			//User-Defined actions
-			SmartArray<OneD_TD_Filter<_Tp> > chosen_filter_at_dim(ndims);
-			SmartIntArray ds_fold_at_dim(ndims);
-			bool is_lowpass = true;
-			//Should start at 0, since we need to check lowpass for ALL filters
-			for (int i = 0; i < ndims; ++i)
-			{
-				const OneD_TD_Filter<_Tp> &this_filter = this_level_md_fs.oned_fs_at_dim[i].filters[cur_pos[i]];
-				chosen_filter_at_dim[i] = this_filter;
-
-				ds_fold_at_dim[i] = this_level_md_fs.oned_fs_at_dim[i].ds_folds[cur_pos[i]];
-				is_lowpass = is_lowpass && (this_level_md_fs.oned_fs_at_dim[i].flags[cur_pos[i]] == LOWPASS_FILTER);
-			}
-
-			if (is_lowpass)
-			{
-				continue;
-			}
-
-			Coefs_Item<_Tp> item;
-			item.is_lowpass = false;
-			conv_by_separable_kernels_and_ds<_Tp>(last_approx, chosen_filter_at_dim, ds_fold_at_dim, is_real, item.coefs);
-			coefs_set[cur_lvl].push_back(item);
-
-			//-- User Action
-		}
-
-		{   // lowpass-channel
-		SmartArray<OneD_TD_Filter<_Tp> > lowpass_filter_at_dim(ndims);
-		SmartIntArray lowpass_ds_fold_at_dim(ndims);
-		for (int i = 0; i < ndims; ++i)
-		{
-			int index = this_level_md_fs.oned_fs_at_dim[i].filters.size() - 1;
-			lowpass_filter_at_dim[i] = this_level_md_fs.oned_fs_at_dim[i].filters[index];
-			lowpass_ds_fold_at_dim[i] = this_level_md_fs.oned_fs_at_dim[i].ds_folds[index];
-		}
-
-		Coefs_Item<_Tp> item;
-		item.is_lowpass = true;
-//				conv_by_separable_kernels<_Tp>(last_approx, chosen_filter_at_dim, true, item.coefs);
-//				downsample<_Tp>(item.coefs, ds_fold_at_dim, item.coefs);
-		conv_by_separable_kernels_and_ds<_Tp>(last_approx, lowpass_filter_at_dim, lowpass_ds_fold_at_dim, is_real, item.coefs);
-		coefs_set[cur_lvl].push_back(item);
-		}
-	}
-
-	return 0;
-}
-
-template<typename _Tp>
-int decompose_in_time_domain2(const ML_MD_TD_FSystem<_Tp> &ml_md_fs, const Mat_<Vec<_Tp, 2> > &input, bool is_real, typename ML_MC_TD_Filter_Norms_Set<_Tp>::type &norms_set, typename ML_MC_TD_Coefs_Set<_Tp>::type &coefs_set)
-{
-
-	if (ml_md_fs.nlevels < 1
-		|| input.dims != ml_md_fs.ndims)
-	{
-		return -1;
-	}
-
-	int nlevels = ml_md_fs.nlevels;
-	int ndims = ml_md_fs.ndims;
-
-	coefs_set.reserve(nlevels);
-	coefs_set.resize(nlevels);
-	norms_set.reserve(nlevels);
-	norms_set.resize(nlevels);
-
-
+	int input_size = input.total();
+	_Tp last_energy = 1.0;
 	for (int cur_lvl = 0; cur_lvl < nlevels; cur_lvl++)
 	{
 		// This mat is referred to as low-pass channel output last level.
@@ -1975,22 +2034,36 @@ int decompose_in_time_domain2(const ML_MD_TD_FSystem<_Tp> &ml_md_fs, const Mat_<
 				{
 					last = scanned[i - 1];
 				}
-				conv_and_ds_in_one_direction<_Tp>(last, i, chosen_filter_at_dim[i], ds_fold_at_dim[i], is_real, scanned[i]);
+				conv_and_ds_in_one_direction<_Tp>(last, i, chosen_filter_at_dim[i], ds_fold_at_dim, is_real, scanned[i]);
 			}
 
-//			stringstream ss;
-//			ss << "Test-Data/output/coef-unds-" << n << ".png";
-//			save_as_media<double>(ss.str(), scanned[ndims-1], NULL);
 
 			Coefs_Item<_Tp> item;
 			item.is_lowpass = false;
 			downsample2<_Tp>(scanned[ndims - 1], ds_fold_at_dim, item.coefs);
 			coefs_set[cur_lvl].push_back(item);
 
-//			Coefs_Item<_Tp> item;
-//			item.is_lowpass = false;
-//			conv_by_separable_kernels_and_ds<_Tp>(last_approx, chosen_filter_at_dim, ds_fold_at_dim, is_real, item.coefs);
-//			coefs_set[cur_lvl].push_back(item);
+			//*norm
+			_Tp energy = 1.0;
+			double ds_prod = 1.0;
+			for (int i = 0; i < ndims; ++i)
+			{
+				energy *= lpnorm<_Tp>(chosen_filter_at_dim[i].coefs,(_Tp)2);
+				ds_prod *= ds_fold_at_dim[i];
+			}
+
+			if (cur_lvl == 0)
+			{
+				energy /= sqrt(input_size/ds_prod);
+				norms_set[cur_lvl].push_back(energy);
+			}
+			else
+			{
+				energy *= last_energy;
+				energy /= sqrt(input_size/ds_prod);
+				norms_set[cur_lvl].push_back(energy);
+			}
+			// norm --
 
 			cur_pos.copy(last_pos);
 			//-- User Action
@@ -2010,16 +2083,36 @@ int decompose_in_time_domain2(const ML_MD_TD_FSystem<_Tp> &ml_md_fs, const Mat_<
 		item.is_lowpass = true;
 		conv_by_separable_kernels_and_ds<_Tp>(last_approx, lowpass_filter_at_dim, lowpass_ds_fold_at_dim, is_real, item.coefs);
 		coefs_set[cur_lvl].push_back(item);
+
+		// norm
+		_Tp energy = 1.0;
+		double ds_prod = 1.0;
+		for (int i = 0; i < ndims; ++i)
+		{
+			energy *= lpnorm<_Tp>(lowpass_filter_at_dim[i].coefs,(_Tp)2);
+			ds_prod *= lowpass_ds_fold_at_dim[i];
+		}
+
+		if (cur_lvl == 0)
+		{
+			last_energy = energy * sqrt(ds_prod);
+		}
+		else
+		{
+			last_energy *= (energy *sqrt(ds_prod));
+		}
+		// norm --
 		}
 	}
-
+	norms_set[norms_set.size() - 1].push_back(last_energy / sqrt(input_size));
 	return 0;
 }
 
 
 template <typename _Tp>
-int reconstruct_in_time_domain(const ML_MD_TD_FSystem<_Tp> &ml_md_fs, const typename ML_MC_TD_Coefs_Set<_Tp>::type &coefs_set, bool is_real, Mat_<Vec<_Tp, 2> > &rec)
+int reconstruct_in_time_domain(const ML_MD_TD_FS_Param &fs_param, const ML_MD_TD_FSystem<_Tp> &ml_md_fs, const typename ML_MC_Coefs_Set<_Tp>::type &coefs_set, Mat_<Vec<_Tp, 2> > &rec)
 {
+	bool is_real = fs_param.is_real;
 	int nlevels = ml_md_fs.nlevels;
 	int ndims = ml_md_fs.ndims;
 	if (nlevels < 1)
@@ -2031,7 +2124,7 @@ int reconstruct_in_time_domain(const ML_MD_TD_FSystem<_Tp> &ml_md_fs, const type
 	Mat_<Vec<_Tp, 2> > upper_lowpass_approx;
 	for (int cur_lvl = nlevels - 1; cur_lvl >= 0; --cur_lvl)
 	{
-		const typename MC_TD_Coefs_Set<_Tp>::type &this_level_coefs_set = coefs_set[cur_lvl];
+		const typename MC_Coefs_Set<_Tp>::type &this_level_coefs_set = coefs_set[cur_lvl];
 		const MD_TD_FSystem<_Tp> &this_level_md_fs = ml_md_fs.md_fs_at_level[cur_lvl];
 		Mat_<Vec<_Tp, 2> > this_level_lowpass_approx;
 		Mat_<Vec<_Tp, 2> > this_level_upsampled_sum;
